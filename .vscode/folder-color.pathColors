@@ -5,6 +5,11 @@
         "badge": "🏠"
     },
     {
+        "folderPath": "src/Config/",
+        "color": "foldercolorizer.color_00cc33",
+        "badge": "⚙️"
+    },
+    {
         "folderPath": "src/StateMachine/",
         "color": "foldercolorizer.color_9933cc",
         "badge": "🔄"
