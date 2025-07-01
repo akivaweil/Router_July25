@@ -110,21 +110,21 @@ void initializeStateMachine() {
         lastStateUpdate = millis();
         
         // Initialize hardware pins for state management
-        CONFIGURE_OUTPUT(STATUS_LED_PIN);
-        CONFIGURE_OUTPUT(ERROR_LED_PIN);
-        CONFIGURE_OUTPUT(READY_LED_PIN);
-        CONFIGURE_OUTPUT(RUNNING_LED_PIN);
+        configureOutput(STATUS_LED_PIN);
+        configureOutput(ERROR_LED_PIN);
+        configureOutput(READY_LED_PIN);
+        configureOutput(RUNNING_LED_PIN);
         
         // Initialize router-specific output pins
-        CONFIGURE_OUTPUT(FEED_CYLINDER_PIN);
-        CONFIGURE_OUTPUT(FLIP_SERVO_PIN);
+        configureOutput(FEED_CYLINDER_PIN);
+        configureOutput(FLIP_SERVO_PIN);
         
         // Initialize input pins
-        CONFIGURE_INPUT_PULLDOWN(START_BUTTON_PIN);
-        CONFIGURE_INPUT_PULLDOWN(STOP_BUTTON_PIN);
-        CONFIGURE_INPUT_PULLUP(EMERGENCY_STOP_PIN);
-        CONFIGURE_INPUT_PULLDOWN(RESET_BUTTON_PIN);
-        CONFIGURE_INPUT_PULLDOWN(START_SENSOR_PIN);
+        configureInputPulldown(START_BUTTON_PIN);
+        configureInputPulldown(STOP_BUTTON_PIN);
+        configureInputPullup(EMERGENCY_STOP_PIN);
+        configureInputPulldown(RESET_BUTTON_PIN);
+        configureInputPulldown(START_SENSOR_PIN);
         
         // Record initial state
         recordStateHistory(currentState);
@@ -144,13 +144,13 @@ void initializeStateMachine() {
 //! Main state machine update function (call from main loop)
 void updateStateMachine() {
     // Check for emergency stop first (highest priority)
-    if (READ_PIN(EMERGENCY_STOP_PIN) && !emergencyStopActive) {
+    if (readPin(EMERGENCY_STOP_PIN) && !emergencyStopActive) {
         handleEmergencyStop();
         return;
     }
     
     // Check for system pause
-    if (READ_PIN(STOP_BUTTON_PIN) && !systemPaused) {
+    if (readPin(STOP_BUTTON_PIN) && !systemPaused) {
         handleSystemPause();
     }
     
@@ -324,9 +324,9 @@ void handleEmergencyStop() {
     transitionToState(STATE_EMERGENCY_STOP);
     
     // Set error indicators
-    WRITE_PIN_HIGH(ERROR_LED_PIN);
-    WRITE_PIN_LOW(RUNNING_LED_PIN);
-    WRITE_PIN_LOW(READY_LED_PIN);
+    writePinHigh(ERROR_LED_PIN);
+    writePinLow(RUNNING_LED_PIN);
+    writePinLow(READY_LED_PIN);
 }
 
 //! Handle emergency stop state
@@ -345,7 +345,7 @@ void handleEmergencyStopState() {
     }
     
     // Check if emergency stop is released
-    if (!READ_PIN(EMERGENCY_STOP_PIN)) {
+    if (!readPin(EMERGENCY_STOP_PIN)) {
         Serial.println("Emergency stop released - resetting system");
         emergencyStopActive = false;
         emergencyInitialized = false;
@@ -380,9 +380,9 @@ void handleShutdownState() {
         emergencyStopFlipServo();
         
         // Turn off all LEDs except error LED
-        WRITE_PIN_LOW(READY_LED_PIN);
-        WRITE_PIN_LOW(RUNNING_LED_PIN);
-        WRITE_PIN_HIGH(ERROR_LED_PIN);
+        writePinLow(READY_LED_PIN);
+        writePinLow(RUNNING_LED_PIN);
+        writePinHigh(ERROR_LED_PIN);
         
         Serial.println("System shutdown complete");
         shutdownInitialized = true;

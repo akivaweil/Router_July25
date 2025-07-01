@@ -28,10 +28,10 @@ static int stableReadings = 0;
 void initStartSensor() {
     if (!sensorInitialized) {
         // Configure sensor pin as input with pulldown (Active HIGH)
-        CONFIGURE_INPUT_PULLDOWN(START_SENSOR_PIN);
+        configureInputPulldown(START_SENSOR_PIN);
         
         // Read initial state
-        currentState = READ_PIN(START_SENSOR_PIN);
+        currentState = readPin(START_SENSOR_PIN);
         lastState = currentState;
         stableState = currentState;
         lastChangeTime = millis();
@@ -58,7 +58,7 @@ bool readStartSensor() {
     lastReadTime = millis();
     
     // Read current pin state
-    bool rawState = READ_PIN(START_SENSOR_PIN);
+    bool rawState = readPin(START_SENSOR_PIN);
     
     // Check if state has changed
     if (rawState != lastState) {
@@ -129,7 +129,7 @@ bool readStartSensorRaw() {
         return false;
     }
     
-    return READ_PIN(START_SENSOR_PIN);
+    return readPin(START_SENSOR_PIN);
 }
 
 //! Get time since last state change

@@ -34,6 +34,7 @@
         "color": "foldercolorizer.color_9933cc",
         "badge": "💾"
     },
+
     {
         "folderPath": ".vscode/",
         "color": "foldercolorizer.color_666666",

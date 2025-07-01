@@ -24,10 +24,10 @@ static unsigned long lastOperationTime = 0;
 void initFeedCylinder() {
     if (!feedCylinderInitialized) {
         // Configure feed cylinder pin as output
-        CONFIGURE_OUTPUT(FEED_CYLINDER_PIN);
+        configureOutput(FEED_CYLINDER_PIN);
         
         // Start in safe retracted position (HIGH signal)
-        WRITE_PIN_HIGH(FEED_CYLINDER_PIN);
+        writePinHigh(FEED_CYLINDER_PIN);
         feedCylinderExtended = false;
         lastOperationTime = millis();
         
@@ -44,7 +44,7 @@ void extendFeedCylinder() {
     }
     
     // Extend the cylinder
-    WRITE_PIN_LOW(FEED_CYLINDER_PIN);
+    writePinLow(FEED_CYLINDER_PIN);
     feedCylinderExtended = true;
     lastOperationTime = millis();
     
@@ -55,11 +55,11 @@ void extendFeedCylinder() {
 void retractFeedCylinder() {
     if (!feedCylinderInitialized) {
         // Allow retraction even if not initialized for safety
-        CONFIGURE_OUTPUT(FEED_CYLINDER_PIN);
+        configureOutput(FEED_CYLINDER_PIN);
     }
     
     // Retract the cylinder
-    WRITE_PIN_HIGH(FEED_CYLINDER_PIN);
+    writePinHigh(FEED_CYLINDER_PIN);
     feedCylinderExtended = false;
     lastOperationTime = millis();
     
@@ -81,8 +81,8 @@ void emergencyRetractFeedCylinder() {
     Serial.println("EMERGENCY: Immediately retracting feed cylinder");
     
     // Force retraction regardless of initialization state
-    CONFIGURE_OUTPUT(FEED_CYLINDER_PIN);
-    WRITE_PIN_HIGH(FEED_CYLINDER_PIN);
+    configureOutput(FEED_CYLINDER_PIN);
+    writePinHigh(FEED_CYLINDER_PIN);
     feedCylinderExtended = false;
     lastOperationTime = millis();
 }
