@@ -41,8 +41,8 @@ void initIdleState() {
         // Configure output pins
         configureOutput(FEED_CYLINDER_PIN);
         
-        // Ensure feed cylinder is retracted (safe position)
-        writePinHigh(FEED_CYLINDER_PIN);
+        // Ensure feed cylinder is extended (safe default position)
+        extendFeedCylinder();
         
         // Setup manual start button with Bounce2 debouncer
         manualStartButton.attach(MANUAL_START_PIN);
@@ -59,7 +59,7 @@ void executeIdleState() {
     manualStartButton.update();
     
     // Check for start signal from stage 2 machine
-    if (readPin(START_SENSOR_PIN)) {
+    if (digitalRead(START_SENSOR_PIN)) {
         Serial.println("Start signal received from stage 2 machine");
         return;
     }
@@ -77,7 +77,7 @@ bool shouldExitIdleState() {
     manualStartButton.update();
     
     // Check both start conditions
-    return (readPin(START_SENSOR_PIN) || manualStartButton.rose());
+    return (digitalRead(START_SENSOR_PIN) || manualStartButton.rose());
 }
 
 //! Reset IDLE state for next cycle

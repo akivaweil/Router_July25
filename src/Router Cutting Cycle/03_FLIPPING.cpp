@@ -1,8 +1,8 @@
 //* ************************************************************************
 //* ************************ 03_FLIPPING STATE ***************************
 //* ************************************************************************
-//! FLIPPING State: Flips wood using servo and retracts cylinder
-//! Sequence: Move servo to 0° -> Wait 200ms -> Return to 0° -> Retract cylinder HIGH
+//! FLIPPING State: Flips wood using servo and returns cylinder to safe position
+//! Sequence: Move servo to 100° -> Wait 200ms -> Return to 0° -> Extend cylinder LOW
 
 #include <Arduino.h>
 #include "../../include/Config.h"
@@ -91,16 +91,16 @@ void executeFlippingState() {
 }
 
 //! ************************************************************************
-//! STEP 1: MOVE SERVO TO 0 DEGREES
+//! STEP 1: MOVE SERVO TO 100 DEGREES
 //! ************************************************************************
 void executeMoveServo() {
     static bool stepStarted = false;
     
     if (!stepStarted) {
-        Serial.println("FLIPPING STEP 1: Moving flip servo to 0 degrees");
+        Serial.println("FLIPPING STEP 1: Moving flip servo to 100 degrees");
         
-        // Move servo to 0 degrees position
-        flipServo.write(FLIP_SERVO_ZERO_POSITION);
+        // Move servo to 100 degrees position for flipping
+        flipServo.write(FLIP_SERVO_FLIP_POSITION);
         
         stepStartTime = millis();
         stepStarted = true;
@@ -153,16 +153,16 @@ void executeReturnServo() {
 }
 
 //! ************************************************************************
-//! STEP 4: RETRACT FEED CYLINDER WITH HIGH SIGNAL
+//! STEP 4: EXTEND FEED CYLINDER TO SAFE DEFAULT POSITION
 //! ************************************************************************
 void executeFlippingRetractCylinder() {
     static bool stepStarted = false;
     
     if (!stepStarted) {
-        Serial.println("FLIPPING STEP 4: Retracting feed cylinder with HIGH signal");
+        Serial.println("FLIPPING STEP 4: Extending feed cylinder to safe default position");
         
-        // Send HIGH signal to retract cylinder (per specification)
-        writePinHigh(FEED_CYLINDER_PIN);
+        // Return cylinder to extended (safe default position) after cutting cycle
+        extendFeedCylinder();
         
         stepStartTime = millis();
         stepStarted = true;

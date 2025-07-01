@@ -15,7 +15,7 @@
 const int START_SENSOR_PIN = 2;          // Start signal from stage 2 machine (Active HIGH)
 const int MANUAL_START_PIN = 12;         // Manual start button (Active HIGH)
 
-// Feed cylinder control (inverted logic - LOW extends, HIGH retracts)
+// Feed cylinder control (LOW extends = safe default, HIGH retracts = cutting cycle)
 const int FEED_CYLINDER_PIN = 21;        // Feed cylinder solenoid control
 
 // Servo control
@@ -34,15 +34,11 @@ void configureOutput(int pin) {
     pinMode(pin, OUTPUT);
 }
 
-// Digital read/write functions
-bool readPin(int pin) {
-    return digitalRead(pin);
+// Feed cylinder control functions
+void retractFeedCylinder() {
+    digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
 }
 
-void writePinHigh(int pin) {
-    digitalWrite(pin, HIGH);
-}
-
-void writePinLow(int pin) {
-    digitalWrite(pin, LOW);
+void extendFeedCylinder() {
+    digitalWrite(FEED_CYLINDER_PIN, LOW);   // LOW extends the cylinder (safe default position)
 } 

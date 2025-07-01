@@ -15,7 +15,7 @@
 extern const int START_SENSOR_PIN;          // Start signal from stage 2 machine (Active HIGH)
 extern const int MANUAL_START_PIN;          // Manual start button (Active HIGH)
 
-// Feed cylinder control (inverted logic - LOW extends, HIGH retracts)
+// Feed cylinder control (LOW extends = safe default, HIGH retracts = cutting cycle)
 extern const int FEED_CYLINDER_PIN;         // Feed cylinder solenoid control
 
 // Servo control
@@ -29,9 +29,8 @@ extern const int FLIP_SERVO_PIN;            // Flip servo PWM signal pin
 void configureInputPulldown(int pin);
 void configureOutput(int pin);
 
-// Digital read/write functions
-bool readPin(int pin);
-void writePinHigh(int pin);
-void writePinLow(int pin);
+// Feed cylinder control functions
+void retractFeedCylinder();
+void extendFeedCylinder();
 
 #endif // PINS_DEFINITIONS_H 

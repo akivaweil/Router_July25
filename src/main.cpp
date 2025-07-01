@@ -16,7 +16,8 @@
 enum SystemState {
     STATE_IDLE = 1,
     STATE_FEEDING,
-    STATE_FLIPPING
+    STATE_FLIPPING,
+    STATE_FEEDING2
 };
 
 // Current system state
@@ -44,6 +45,12 @@ void executeFlippingState();
 bool isFlippingComplete();
 void resetFlippingState();
 
+// FEEDING2 state functions (same as FEEDING - second cycle)
+void initFeeding2State();
+void executeFeeding2State();
+bool isFeeding2Complete();
+void resetFeeding2State();
+
 //* ************************************************************************
 //* ************************ MAIN SETUP AND LOOP *************************
 //* ************************************************************************
@@ -52,18 +59,24 @@ void resetFlippingState();
 void setup() {
     // Initialize serial communication
     Serial.begin(115200);
-    delay(1000); // Allow serial to initialize
+    delay(300); // Allow serial to initialize
     
     Serial.println();
     Serial.println("===========================================");
     Serial.println("ESP32 Router Control System - Barebones");
     Serial.println("===========================================");
-    Serial.println("State Flow: IDLE -> FEEDING -> FLIPPING -> IDLE");
+    Serial.println("State Flow: IDLE -> FEEDING -> FLIPPING -> FEEDING2 -> IDLE");
     Serial.println();
+
+    
     
     // Initialize with IDLE state
     currentState = STATE_IDLE;
     initIdleState();
+
+    digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
+    delay(1000);
+    digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW extends the cylinder (idle position)
     
     Serial.println("System initialized and ready");
 }
@@ -96,9 +109,20 @@ void loop() {
         case STATE_FLIPPING:
             executeFlippingState();
             
-            // Check for transition back to IDLE
+            // Check for transition to FEEDING2
             if (isFlippingComplete()) {
                 resetFlippingState();
+                currentState = STATE_FEEDING2;
+                initFeeding2State();
+            }
+            break;
+            
+        case STATE_FEEDING2:
+            executeFeeding2State();
+            
+            // Check for transition back to IDLE
+            if (isFeeding2Complete()) {
+                resetFeeding2State();
                 currentState = STATE_IDLE;
                 initIdleState();
             }
