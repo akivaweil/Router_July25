@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include "../../include/Config.h"
 #include "../../include/Pins_Definitions.h"
-#include <ESP32Servo.h>
+#include "../../include/ServoMotor.h"
 
 //* ************************************************************************
 //* ************************ FLIPPING STATE VARIABLES ********************
@@ -19,9 +19,8 @@ static int currentStep = 0;
 static bool flippingInitialized = false;
 static bool flippingComplete = false;
 
-// Servo object
-static Servo flipServo;
-static bool servoAttached = false;
+// External reference to global servo motor instance
+extern ServoMotor flipServo;
 
 // Step definitions
 enum FlippingSteps {
@@ -57,12 +56,8 @@ void initFlippingState() {
         currentStep = STEP_MOVE_SERVO;
         flippingComplete = false;
         
-        // Initialize servo if not already attached
-        if (!servoAttached) {
-            flipServo.attach(FLIP_SERVO_PIN);
-            servoAttached = true;
-            Serial.println("Flip servo attached and initialized");
-        }
+        // Servo is already initialized globally in main.cpp
+        Serial.println("Using globally initialized servo motor");
         
         Serial.println("Starting wood flipping sequence...");
         flippingInitialized = true;
@@ -100,7 +95,7 @@ void executeMoveServo() {
         Serial.println("FLIPPING STEP 1: Moving flip servo to 100 degrees");
         
         // Move servo to 100 degrees position for flipping
-        flipServo.write(FLIP_SERVO_FLIP_POSITION);
+        flipServo.setAngle((float)FLIP_SERVO_FLIP_POSITION);
         
         stepStartTime = millis();
         stepStarted = true;
@@ -141,7 +136,7 @@ void executeReturnServo() {
         Serial.println("FLIPPING STEP 3: Returning servo to zero position immediately");
         
         // Return servo to zero position (same as initial position)
-        flipServo.write(FLIP_SERVO_ZERO_POSITION);
+        flipServo.setAngle((float)FLIP_SERVO_ZERO_POSITION);
         
         stepStartTime = millis();
         stepStarted = true;

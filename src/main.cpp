@@ -7,6 +7,7 @@
 #include <Arduino.h>
 #include "../include/Config.h"
 #include "../include/Pins_Definitions.h"
+#include "../include/ServoMotor.h"
 
 //* ************************************************************************
 //* ************************ STATE MACHINE DEFINITIONS *******************
@@ -22,6 +23,13 @@ enum SystemState {
 
 // Current system state
 static SystemState currentState = STATE_IDLE;
+
+//* ************************************************************************
+//* ************************ SERVO MOTOR INSTANCE ************************
+//* ************************************************************************
+
+// Global servo motor instance using the robust ServoMotor class
+ServoMotor flipServo(FLIP_SERVO_PIN);
 
 //* ************************************************************************
 //* ************************ FUNCTION DECLARATIONS ***********************
@@ -68,7 +76,14 @@ void setup() {
     Serial.println("State Flow: IDLE -> FEEDING -> FLIPPING -> FEEDING2 -> IDLE");
     Serial.println();
 
+    // Configure pins
+    configureInputPulldown(START_SENSOR_PIN);
+    configureInputPulldown(MANUAL_START_PIN);
+    configureOutput(FEED_CYLINDER_PIN);
     
+    // Initialize servo motor with starting angle
+    flipServo.init(0.0f);  // Initialize at 0 degrees
+    Serial.println("Servo motor initialized successfully");
     
     // Initialize with IDLE state
     currentState = STATE_IDLE;
