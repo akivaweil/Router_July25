@@ -8,6 +8,16 @@
 #include "../../../include/Config.h"
 #include "../../../include/Pins_Definitions.h"
 
+// Component includes
+#include "../../../include/FeedCylinder.h"
+#include "../../../include/FlipServo.h"
+#include "../../../include/StartSensor.h"
+
+// State includes
+#include "../../../include/IdleState.h"
+#include "../../../include/FeedingState.h"
+#include "../../../include/FlippingState.h"
+
 //* ************************************************************************
 //* ************************ STATE DEFINITIONS ***************************
 //* ************************************************************************
@@ -149,7 +159,7 @@ void updateStateMachine() {
         case STATE_IDLE:
             executeIdleState();
             // Check for transition to feeding state
-            if (isStartCommandActive()) {
+            if (isStartSensorRisingEdge()) {
                 transitionToState(STATE_FEEDING);
             }
             break;
@@ -157,7 +167,7 @@ void updateStateMachine() {
         case STATE_FEEDING:
             executeFeedingState();
             // Check for transition to flipping state
-            if (isFeedingComplete()) {
+            if (isFeedingStateComplete()) {
                 transitionToState(STATE_FLIPPING);
             }
             break;
@@ -165,7 +175,7 @@ void updateStateMachine() {
         case STATE_FLIPPING:
             executeFlippingState();
             // Check for transition back to idle state
-            if (isFlippingComplete()) {
+            if (isFlippingStateComplete()) {
                 transitionToState(STATE_IDLE);
             }
             break;
@@ -302,10 +312,10 @@ void handleEmergencyStop() {
     // Emergency stop specific actions based on current state
     switch (currentState) {
         case STATE_FEEDING:
-            emergencyStopFeeding();
+            emergencyStopFeedingState();
             break;
         case STATE_FLIPPING:
-            emergencyStopFlipping();
+            emergencyStopFlippingState();
             break;
         default:
             break;
@@ -330,8 +340,8 @@ void handleEmergencyStopState() {
         Serial.println("Emergency stop state active - system halted");
         
         // Ensure all systems are in safe state
-        RETRACT_FEED_CYLINDER();
-        detachFlipServo();
+        emergencyRetractFeedCylinder();
+        emergencyStopFlipServo();
     }
     
     // Check if emergency stop is released
@@ -366,8 +376,8 @@ void handleShutdownState() {
         Serial.println("=== SYSTEM SHUTDOWN ===");
         
         // Safe shutdown procedures
-        RETRACT_FEED_CYLINDER();
-        detachFlipServo();
+        emergencyRetractFeedCylinder();
+        emergencyStopFlipServo();
         
         // Turn off all LEDs except error LED
         WRITE_PIN_LOW(READY_LED_PIN);

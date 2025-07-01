@@ -89,6 +89,8 @@
 #define MAX_STATE_HISTORY 10           // Maximum state history to maintain
 #define STATE_TIMEOUT 30000            // 30 seconds state timeout
 #define EMERGENCY_STOP_PRIORITY 1      // Highest priority for emergency stop
+#define HEALTH_CHECK_INTERVAL 5000     // Health check every 5 seconds
+#define SENSOR_CHECK_INTERVAL 100      // Sensor check every 100ms
 
 //* ************************************************************************
 //* ************************ SAFETY CONFIGURATION ***********************

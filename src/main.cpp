@@ -3,6 +3,11 @@
 #include "../include/Config.h"
 #include "../include/Pins_Definitions.h"
 
+// Component includes
+#include "../include/FeedCylinder.h"
+#include "../include/FlipServo.h"
+#include "../include/StartSensor.h"
+
 // Forward declarations for OTA functions from OTA_Manager.cpp
 void initOTA();
 void handleOTA();
@@ -49,6 +54,12 @@ void setup() {
   Serial.print("Free Heap: ");
   Serial.println(ESP.getFreeHeap());
   Serial.println();
+  
+  // Initialize hardware components
+  Serial.println("Initializing Hardware Components...");
+  initFeedCylinder();
+  initFlipServo();
+  initStartSensor();
   
   // Initialize State Machine
   Serial.println("Initializing State Machine...");
