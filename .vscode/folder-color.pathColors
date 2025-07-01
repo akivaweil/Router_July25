@@ -1,0 +1,42 @@
+[
+    {
+        "folderPath": "src/",
+        "color": "foldercolorizer.color_0066cc",
+        "badge": "🏠"
+    },
+    {
+        "folderPath": "src/StateMachine/",
+        "color": "foldercolorizer.color_9933cc",
+        "badge": "🔄"
+    },
+    {
+        "folderPath": "src/StateMachine/STATES/",
+        "color": "foldercolorizer.color_ffcc00",
+        "badge": "🔄"
+    },
+    {
+        "folderPath": "src/StateMachine/FUNCTIONS/",
+        "color": "foldercolorizer.color_9933cc",
+        "badge": "🔄"
+    },
+    {
+        "folderPath": "src/Router Cutting Cycle/",
+        "color": "foldercolorizer.color_00cccc",
+        "badge": "🎨"
+    },
+    {
+        "folderPath": "include/",
+        "color": "foldercolorizer.color_00cc33",
+        "badge": "⚙️"
+    },
+    {
+        "folderPath": "lib/",
+        "color": "foldercolorizer.color_9933cc",
+        "badge": "💾"
+    },
+    {
+        "folderPath": ".vscode/",
+        "color": "foldercolorizer.color_666666",
+        "badge": "⚙️"
+    }
+] 
