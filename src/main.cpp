@@ -8,6 +8,7 @@
 #include "../include/Config.h"
 #include "../include/Pins_Definitions.h"
 #include "../include/ServoMotor.h"
+#include "OTAUpdater/ota_updater.h"
 
 //* ************************************************************************
 //* ************************ STATE MACHINE DEFINITIONS *******************
@@ -76,6 +77,10 @@ void setup() {
     Serial.println("State Flow: IDLE -> FEEDING -> FLIPPING -> FEEDING2 -> IDLE");
     Serial.println();
 
+    // Initialize OTA functionality
+    setupOTA();
+    Serial.println("OTA initialized successfully");
+
     // Configure pins
     configureInputPulldown(START_SENSOR_PIN);
     configureInputPulldown(MANUAL_START_PIN);
@@ -98,6 +103,9 @@ void setup() {
 
 //! Arduino main loop function
 void loop() {
+    // Handle OTA requests
+    handleOTA();
+    
     // Execute current state
     switch (currentState) {
         case STATE_IDLE:
