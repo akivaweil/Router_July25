@@ -41,7 +41,7 @@ enum FlippingSteps {
 void executeMoveServo();
 void executeWaitServo();
 void executeReturnServo();
-void executeRetractCylinder();
+void executeRetractCylinderFlipping();
 void completeFlipping();
 
 //* ************************************************************************
@@ -96,7 +96,7 @@ void executeFlippingState() {
             break;
             
         case STEP_RETRACT_CYLINDER:
-            executeRetractCylinder();
+            executeRetractCylinderFlipping();
             break;
             
         case STEP_COMPLETE:
@@ -175,7 +175,7 @@ void executeReturnServo() {
 //! ************************************************************************
 //! STEP 4: RETRACT FEED CYLINDER
 //! ************************************************************************
-void executeRetractCylinder() {
+void executeRetractCylinderFlipping() {
     static bool stepInitialized = false;
     
     if (!stepInitialized) {

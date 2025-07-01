@@ -72,6 +72,11 @@ void transitionToState(SystemState newState);
 void recordStateHistory(SystemState state);
 void handleEmergencyStop();
 void handleSystemPause();
+void exitCurrentState();
+void initializeCurrentState();
+void handleEmergencyStopState();
+void handleShutdownState();
+const char* getStateName(SystemState state);
 
 //* ************************************************************************
 //* ************************ STATE MACHINE INITIALIZATION ***************

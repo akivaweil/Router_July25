@@ -10,6 +10,17 @@
 #include "../../../include/Pins_Definitions.h"
 
 //* ************************************************************************
+//* ************************ FORWARD DECLARATIONS ***********************
+//* ************************************************************************
+
+void checkIdleStateTransitions();
+void performIdleBackgroundTasks();
+void monitorSystemHealth();
+void checkSensorStates();
+void maintainCommunication();
+void maintainSafetySystems();
+
+//* ************************************************************************
 //* ************************ IDLE STATE VARIABLES ***********************
 //* ************************************************************************
 
