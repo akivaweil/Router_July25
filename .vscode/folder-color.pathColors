@@ -20,9 +20,9 @@
         "badge": "🔄"
     },
     {
-        "folderPath": "src/Router Cutting Cycle/",
-        "color": "foldercolorizer.color_00cccc",
-        "badge": "🎨"
+        "folderPath": "src/Components/",
+        "color": "foldercolorizer.color_ff6600",
+        "badge": "🔌"
     },
     {
         "folderPath": "include/",
