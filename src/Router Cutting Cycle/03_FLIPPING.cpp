@@ -7,7 +7,7 @@
 #include <Arduino.h>
 #include "../../include/Config.h"
 #include "../../include/Pins_Definitions.h"
-#include "../../include/ServoMotor.h"
+#include "../../include/Router Cutting Cycle/Servo_Functions.h"
 
 //* ************************************************************************
 //* ************************ FLIPPING STATE VARIABLES ********************
@@ -19,8 +19,7 @@ static int currentStep = 0;
 static bool flippingInitialized = false;
 static bool flippingComplete = false;
 
-// External reference to global servo motor instance
-extern ServoMotor flipServo;
+// No external reference needed - using servo functions from Servo_Functions.h
 
 // Step definitions
 enum FlippingSteps {
@@ -94,8 +93,8 @@ void executeMoveServo() {
     if (!stepStarted) {
         Serial.println("FLIPPING STEP 1: Moving flip servo to 100 degrees");
         
-        // Move servo to 100 degrees position for flipping
-        flipServo.setAngle((float)FLIP_SERVO_FLIP_POSITION);
+        // Move servo to flip position using Stage 1 approach
+        moveServoToAngle(FLIP_SERVO_FLIP_POSITION);
         
         stepStartTime = millis();
         stepStarted = true;
@@ -135,8 +134,8 @@ void executeReturnServo() {
     if (!stepStarted) {
         Serial.println("FLIPPING STEP 3: Returning servo to zero position immediately");
         
-        // Return servo to zero position (same as initial position)
-        flipServo.setAngle((float)FLIP_SERVO_ZERO_POSITION);
+        // Return servo to zero position using Stage 1 approach
+        moveServoToAngle(FLIP_SERVO_ZERO_POSITION);
         
         stepStartTime = millis();
         stepStarted = true;

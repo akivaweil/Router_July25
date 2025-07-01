@@ -5,9 +5,10 @@
 //! State Flow: IDLE -> FEEDING -> FLIPPING -> IDLE
 
 #include <Arduino.h>
+#include <ESP32Servo.h>
 #include "../include/Config.h"
 #include "../include/Pins_Definitions.h"
-#include "../include/ServoMotor.h"
+#include "Config/Servo_Config.h"
 #include "OTAUpdater/ota_updater.h"
 
 //* ************************************************************************
@@ -29,8 +30,8 @@ static SystemState currentState = STATE_IDLE;
 //* ************************ SERVO MOTOR INSTANCE ************************
 //* ************************************************************************
 
-// Global servo motor instance using the robust ServoMotor class
-ServoMotor flipServo(FLIP_SERVO_PIN);
+// Global servo motor instance using Stage 1 approach
+Servo flipServo;
 
 //* ************************************************************************
 //* ************************ FUNCTION DECLARATIONS ***********************
@@ -86,9 +87,23 @@ void setup() {
     configureInputPulldown(MANUAL_START_PIN);
     configureOutput(FEED_CYLINDER_PIN);
     
-    // Initialize servo motor with starting angle
-    flipServo.init(0.0f);  // Initialize at 0 degrees
-    Serial.println("Servo motor initialized successfully");
+    //! Initialize servo with robust attachment (Stage 1 approach)
+    Serial.printf("Initializing servo on pin %d with robust attachment\n", FLIP_SERVO_PIN);
+    
+    // Force servo attachment using multiple methods to ensure proper initialization
+    flipServo.attach(FLIP_SERVO_PIN);
+    flipServo.attach(FLIP_SERVO_PIN, 500, 2500);
+    flipServo.attach(FLIP_SERVO_PIN, 1000, 2000);
+    flipServo.attach(FLIP_SERVO_PIN, 544, 2400);  // Standard servo range
+    
+    // Final forced attach
+    flipServo.attach(FLIP_SERVO_PIN);
+    
+    Serial.println("✓ Servo attachment completed - Commands will be sent regardless of attach status");
+    
+    // Set initial servo position to home with forced write
+    flipServo.write(ROUTER_SERVO_HOME_POSITION);
+    Serial.printf("Servo initialized and set to home position: %d degrees\n", ROUTER_SERVO_HOME_POSITION);
     
     // Initialize with IDLE state
     currentState = STATE_IDLE;
