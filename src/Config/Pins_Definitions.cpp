@@ -12,14 +12,14 @@
 //* ************************************************************************
 
 // Start signals
-const int START_SENSOR_PIN = 2;          // Start signal from stage 2 machine (Active HIGH)
-const int MANUAL_START_PIN = 12;         // Manual start button (Active HIGH)
+const int START_SENSOR_PIN = 48;          // Start signal from stage 2 machine (Active HIGH)
+const int MANUAL_START_PIN = 17;         // Manual start button (Active HIGH)
 
 // Feed cylinder control (LOW extends = safe default, HIGH retracts = cutting cycle)
-const int FEED_CYLINDER_PIN = 21;        // Feed cylinder solenoid control
+const int FEED_CYLINDER_PIN = 41;        // Feed cylinder solenoid control
 
 // Servo control
-const int FLIP_SERVO_PIN = 14;           // Flip servo PWM signal pin
+const int FLIP_SERVO_PIN = 16;           // Flip servo PWM signal pin
 
 //* ************************************************************************
 //* ************************ PIN CONFIGURATION FUNCTIONS ****************
