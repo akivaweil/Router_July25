@@ -9,7 +9,6 @@
 #include "../include/Config.h"
 #include "../include/Pins_Definitions.h"
 #include "Config/Servo_Config.h"
-#include "OTAUpdater/ota_updater.h"
 
 //* ************************************************************************
 //* ************************ STATE MACHINE DEFINITIONS *******************
@@ -61,6 +60,10 @@ void executeFeeding2State();
 bool isFeeding2Complete();
 void resetFeeding2State();
 
+// OTA Manager functions (OTA_Manager.cpp)
+void initOTA();
+void handleOTA();
+
 //* ************************************************************************
 //* ************************ MAIN SETUP AND LOOP *************************
 //* ************************************************************************
@@ -79,7 +82,7 @@ void setup() {
     Serial.println();
 
     // Initialize OTA functionality
-    setupOTA();
+    initOTA();
     Serial.println("OTA initialized successfully");
 
     // Configure pins
