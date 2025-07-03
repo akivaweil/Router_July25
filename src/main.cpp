@@ -1,181 +1,154 @@
-//* ************************************************************************
-//* ************************ MAIN ROUTER CONTROL *************************
-//* ************************************************************************
-//! Barebones ESP32 Router Control System
-//! State Flow: IDLE -> FEEDING -> FLIPPING -> IDLE
+/*
+ * Simple ESP32 Router Control System
+ * Written by a beginner programmer
+ * 
+ * This program controls a router machine that:
+ * 1. Waits for a start signal (IDLE)
+ * 2. Feeds wood through router (FEEDING) 
+ * 3. Flips the wood over (FLIPPING)
+ * 4. Feeds wood again (FEEDING2)
+ * 5. Goes back to waiting (IDLE)
+ */
 
 #include <Arduino.h>
 #include <ESP32Servo.h>
-#include "../include/Config.h"
-#include "../include/Pins_Definitions.h"
 
-//* ************************************************************************
-//* ************************ STATE MACHINE DEFINITIONS *******************
-//* ************************************************************************
+// Pin numbers for hardware connections
+const int START_SENSOR_PIN = 48;     // Button or sensor to start the cycle
+const int MANUAL_START_PIN = 17;     // Manual start button
+const int FEED_CYLINDER_PIN = 41;    // Controls the feeding cylinder
+const int FLIP_SERVO_PIN = 16;       // Controls the flipping servo
 
-// State enumeration
-enum SystemState {
-    STATE_IDLE = 1,
-    STATE_FEEDING,
-    STATE_FLIPPING,
-    STATE_FEEDING2
-};
+// Timing settings (in milliseconds)
+const int FEEDING_START_DELAY = 600;        // Wait before starting to feed
+const int FEED_TIME = 2200;                 // How long to push wood through router
+const int SERVO_MOVE_TIME = 1200;           // Time for servo to move and flip wood
 
-// Current system state
-static SystemState currentState = STATE_IDLE;
+// Servo positions (in degrees)
+const int SERVO_HOME_POSITION = 105;        // Normal position
+const int SERVO_FLIP_POSITION = 0;          // Position to flip wood
 
-//* ************************************************************************
-//* ************************ SERVO MOTOR INSTANCE ************************
-//* ************************************************************************
-
-// Global servo motor instance using Stage 1 approach
+// Create servo object
 Servo flipServo;
 
-//* ************************************************************************
-//* ************************ FUNCTION DECLARATIONS ***********************
-//* ************************************************************************
+// Keep track of what the machine is doing
+int currentState = 1;  // 1=IDLE, 2=FEEDING, 3=FLIPPING, 4=FEEDING2
 
-// IDLE state functions (01_IDLE.cpp)
-void initIdleState();
-void executeIdleState();
-bool shouldExitIdleState();
-void resetIdleState();
+// Variables to remember when things started
+unsigned long stateStartTime = 0;
+unsigned long stepStartTime = 0;
+int currentStep = 0;
 
-// FEEDING state functions (Router Cutting Cycle/02_FEEDING.cpp)
-void initFeedingState();
-void executeFeedingState();
-bool isFeedingComplete();
-void resetFeedingState();
-
-// FLIPPING state functions (Router Cutting Cycle/03_FLIPPING.cpp)
-void initFlippingState();
-void executeFlippingState();
-bool isFlippingComplete();
-void resetFlippingState();
-
-// FEEDING2 state functions (same as FEEDING - second cycle)
-void initFeeding2State();
-void executeFeeding2State();
-bool isFeeding2Complete();
-void resetFeeding2State();
-
-// OTA Manager functions (OTA_Manager.cpp)
-void initOTA();
-void handleOTA();
-
-//* ************************************************************************
-//* ************************ MAIN SETUP AND LOOP *************************
-//* ************************************************************************
-
-//! Arduino setup function
+// Setup function - runs once when ESP32 starts
 void setup() {
-    // Initialize serial communication
-    Serial.begin(115200);
-    delay(300); // Allow serial to initialize
-    
-    Serial.println();
-    Serial.println("===========================================");
-    Serial.println("ESP32 Router Control System - Barebones");
-    Serial.println("===========================================");
-    Serial.println("State Flow: IDLE -> FEEDING -> FLIPPING -> FEEDING2 -> IDLE");
-    Serial.println();
-
-    // Initialize OTA functionality
-    initOTA();
-    Serial.println("OTA initialized successfully");
-
-    // Configure pins
-    configureInputPulldown(START_SENSOR_PIN);
-    configureInputPulldown(MANUAL_START_PIN);
-    configureOutput(FEED_CYLINDER_PIN);
-    
-    //! Initialize servo with robust attachment (Stage 1 approach)
-    Serial.printf("Initializing servo on pin %d with robust attachment\n", FLIP_SERVO_PIN);
-    
-    // Force servo attachment using multiple methods to ensure proper initialization
-    flipServo.attach(FLIP_SERVO_PIN);
-    flipServo.attach(FLIP_SERVO_PIN, 500, 2500);
-    flipServo.attach(FLIP_SERVO_PIN, 1000, 2000);
-    flipServo.attach(FLIP_SERVO_PIN, 544, 2400);  // Standard servo range
-    
-    // Final forced attach
-    flipServo.attach(FLIP_SERVO_PIN);
-    
-    Serial.println("✓ Servo attachment completed - Commands will be sent regardless of attach status");
-    
-    // Set initial servo position to home with forced write
-    flipServo.write(FLIP_SERVO_HOME_POSITION);
-    Serial.printf("Servo initialized and set to home position: %d degrees\n", FLIP_SERVO_HOME_POSITION);
-    
-    // Initialize with IDLE state
-    currentState = STATE_IDLE;
-    initIdleState();
-
-    digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
-    delay(FEED_CYLINDER_EXTEND_TIME);
-    digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW extends the cylinder (idle position)
-    
-    Serial.println("System initialized and ready");
+  // Start serial communication so we can see what's happening
+  Serial.begin(115200);
+  delay(500);
+  
+  Serial.println("Simple Router Control System Starting...");
+  
+  // Set up the pins
+  pinMode(START_SENSOR_PIN, INPUT_PULLDOWN);   // Start sensor
+  pinMode(MANUAL_START_PIN, INPUT_PULLDOWN);   // Manual button  
+  pinMode(FEED_CYLINDER_PIN, OUTPUT);          // Cylinder control
+  
+  // Set up the servo
+  flipServo.attach(FLIP_SERVO_PIN);
+  flipServo.write(SERVO_HOME_POSITION);  // Move to home position
+  
+  // Make sure cylinder starts in safe position (extended)
+  digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW = extended = safe
+  
+  Serial.println("System ready! Waiting for start signal...");
 }
 
-//! Arduino main loop function
+// Main loop - runs over and over
 void loop() {
-    // Handle OTA requests
-    handleOTA();
+  
+  // STATE 1: IDLE - Waiting for start signal
+  if (currentState == 1) {
+    // Check if start button pressed or sensor triggered
+    if (digitalRead(START_SENSOR_PIN) || digitalRead(MANUAL_START_PIN)) {
+      Serial.println("Starting router cycle!");
+      currentState = 2;  // Go to FEEDING state
+      stateStartTime = millis();
+      currentStep = 1;
+    }
+  }
+  
+  // STATE 2: FEEDING - Push wood through router
+  else if (currentState == 2) {
     
-    // Execute current state
-    switch (currentState) {
-        case STATE_IDLE:
-            executeIdleState();
-            
-            // Check for transition to FEEDING
-            if (shouldExitIdleState()) {
-                currentState = STATE_FEEDING;
-                initFeedingState();
-            }
-            break;
-            
-        case STATE_FEEDING:
-            executeFeedingState();
-            
-            // Check for transition to FLIPPING
-            if (isFeedingComplete()) {
-                resetFeedingState();
-                currentState = STATE_FLIPPING;
-                initFlippingState();
-            }
-            break;
-            
-        case STATE_FLIPPING:
-            executeFlippingState();
-            
-            // Check for transition to FEEDING2
-            if (isFlippingComplete()) {
-                resetFlippingState();
-                currentState = STATE_FEEDING2;
-                initFeeding2State();
-            }
-            break;
-            
-        case STATE_FEEDING2:
-            executeFeeding2State();
-            
-            // Check for transition back to IDLE
-            if (isFeeding2Complete()) {
-                resetFeeding2State();
-                currentState = STATE_IDLE;
-                initIdleState();
-            }
-            break;
-            
-        default:
-            // Should never reach here, but safety fallback
-            Serial.println("ERROR: Unknown state, returning to IDLE");
-            currentState = STATE_IDLE;
-            initIdleState();
-            break;
+    // Step 1: Wait a little bit before starting
+    if (currentStep == 1) {
+      if (millis() - stateStartTime >= FEEDING_START_DELAY) {
+        Serial.println("Starting to feed wood...");
+        digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH = retract = push wood
+        stepStartTime = millis();
+        currentStep = 2;
+      }
     }
     
-    // Small delay to prevent excessive CPU usage
-    delay(10);
+    // Step 2: Keep pushing for the feed time
+    else if (currentStep == 2) {
+      if (millis() - stepStartTime >= FEED_TIME) {
+        Serial.println("Done feeding, retracting cylinder...");
+        digitalWrite(FEED_CYLINDER_PIN, LOW);   // LOW = extend = safe position
+        currentState = 3;  // Go to FLIPPING state
+        stateStartTime = millis();
+        currentStep = 1;
+      }
+    }
+  }
+  
+  // STATE 3: FLIPPING - Flip the wood over
+  else if (currentState == 3) {
+    
+    // Step 1: Move servo to flip the wood
+    if (currentStep == 1) {
+      Serial.println("Flipping wood...");
+      flipServo.write(SERVO_FLIP_POSITION);  // Move to flip position
+      stepStartTime = millis();
+      currentStep = 2;
+    }
+    
+    // Step 2: Wait for servo to finish moving
+    else if (currentStep == 2) {
+      if (millis() - stepStartTime >= SERVO_MOVE_TIME) {
+        Serial.println("Moving servo back home...");
+        flipServo.write(SERVO_HOME_POSITION);  // Move back to home
+        currentState = 4;  // Go to second feeding
+        stateStartTime = millis();
+        currentStep = 1;
+      }
+    }
+  }
+  
+  // STATE 4: FEEDING2 - Feed the flipped wood through router again
+  else if (currentState == 4) {
+    
+    // Step 1: Wait a little bit before starting
+    if (currentStep == 1) {
+      if (millis() - stateStartTime >= FEEDING_START_DELAY) {
+        Serial.println("Starting second feed...");
+        digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH = retract = push wood
+        stepStartTime = millis();
+        currentStep = 2;
+      }
+    }
+    
+    // Step 2: Keep pushing for the feed time
+    else if (currentStep == 2) {
+      if (millis() - stepStartTime >= FEED_TIME) {
+        Serial.println("Done with second feed!");
+        digitalWrite(FEED_CYLINDER_PIN, LOW);   // LOW = extend = safe position
+        currentState = 1;  // Go back to IDLE state
+        currentStep = 1;
+        Serial.println("Cycle complete! Ready for next piece...");
+      }
+    }
+  }
+  
+  // Small delay so the program doesn't run too fast
+  delay(10);
 }
