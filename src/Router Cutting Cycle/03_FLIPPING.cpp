@@ -135,7 +135,7 @@ void executeReturnServo() {
         Serial.println("FLIPPING STEP 3: Returning servo to zero position immediately");
         
         // Return servo to zero position using Stage 1 approach
-        moveServoToAngle(FLIP_SERVO_ZERO_POSITION);
+        moveServoToAngle(FLIP_SERVO_HOME_POSITION);
         
         stepStartTime = millis();
         stepStarted = true;

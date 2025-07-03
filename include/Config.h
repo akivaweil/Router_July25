@@ -35,7 +35,7 @@ extern const unsigned long MANUAL_START_DEBOUNCE;       // 30ms debounce for man
 //* ************************************************************************
 
 // Servo settings
-extern const int FLIP_SERVO_ZERO_POSITION;              // 0 degrees servo position
+extern const int FLIP_SERVO_HOME_POSITION;              // 0 degrees servo position
 extern const int FLIP_SERVO_FLIP_POSITION;              // 100 degrees servo position for flipping
 
 #endif // CONFIG_H 
