@@ -12,6 +12,12 @@
 
 #include <Arduino.h>
 #include <ESP32Servo.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+
+// Forward declarations for OTA functions
+void initOTA();
+void handleOTA();
 
 // Pin numbers for hardware connections
 const int START_SENSOR_PIN = 48;     // Button or sensor to start the cycle
@@ -22,11 +28,11 @@ const int FLIP_SERVO_PIN = 16;       // Controls the flipping servo
 // Timing settings (in milliseconds)
 const int FEEDING_START_DELAY = 600;        // Wait before starting to feed
 const int FEED_TIME = 2200;                 // How long to push wood through router
-const int SERVO_MOVE_TIME = 1200;           // Time for servo to move and flip wood
+const int SERVO_MOVE_TIME = 1500;           // Time for servo to move and flip wood
 
 // Servo positions (in degrees)
 const int SERVO_HOME_POSITION = 105;        // Normal position
-const int SERVO_FLIP_POSITION = 0;          // Position to flip wood
+const int SERVO_FLIP_POSITION = 5;          // Position to flip wood
 
 // Create servo object
 Servo flipServo;
@@ -41,6 +47,11 @@ int currentStep = 0;
 
 // Setup function - runs once when ESP32 starts
 void setup() {
+  // --- DISABLE BROWNOUT DETECTOR ---
+  // This is the fix for the ESP32 restarting when the servo moves.
+  // It tells the ESP32 to ignore the voltage drop from the servo's high current draw.
+  WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
   // Start serial communication so we can see what's happening
   Serial.begin(115200);
   delay(500);
@@ -52,12 +63,47 @@ void setup() {
   pinMode(MANUAL_START_PIN, INPUT_PULLDOWN);   // Manual button  
   pinMode(FEED_CYLINDER_PIN, OUTPUT);          // Cylinder control
   
-  // Set up the servo
+  // Set up the servo with robust attachment
+  Serial.println("Setting up servo motor...");
+  
+  // Try multiple attachment methods to ensure it works
+  flipServo.attach(FLIP_SERVO_PIN);                    // Basic attach
+  delay(100);
+  flipServo.attach(FLIP_SERVO_PIN, 500, 2500);         // With custom pulse widths
+  delay(100);
+  flipServo.attach(FLIP_SERVO_PIN, 1000, 2000);        // Standard range
+  delay(100);
+  flipServo.attach(FLIP_SERVO_PIN, 544, 2400);         // Arduino standard
+  delay(100);
+  
+  // Final attach with most common settings
   flipServo.attach(FLIP_SERVO_PIN);
-  flipServo.write(SERVO_HOME_POSITION);  // Move to home position
+  delay(100);
+  
+  // Check if servo attached successfully
+  if (flipServo.attached()) {
+    Serial.println("✓ Servo attached successfully!");
+  } else {
+    Serial.println("✗ Servo attachment failed - but continuing anyway");
+  }
+  
+  // Force servo to home position with multiple commands
+  Serial.println("Moving servo to home position...");
+  flipServo.write(SERVO_HOME_POSITION);  
+  delay(100);
+  flipServo.write(SERVO_HOME_POSITION);  // Send command twice to be sure
+  delay(100);
+  flipServo.write(SERVO_HOME_POSITION);  // Third time for safety
+  delay(100);
+
+
+  Serial.println("Servo setup complete!");
   
   // Make sure cylinder starts in safe position (extended)
   digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW = extended = safe
+  
+  // Initialize OTA functionality
+  initOTA();
   
   Serial.println("System ready! Waiting for start signal...");
 }
@@ -65,6 +111,9 @@ void setup() {
 // Main loop - runs over and over
 void loop() {
   
+  // Handle Over-The-Air updates
+  handleOTA();
+
   // STATE 1: IDLE - Waiting for start signal
   if (currentState == 1) {
     // Check if start button pressed or sensor triggered
@@ -107,16 +156,31 @@ void loop() {
     // Step 1: Move servo to flip the wood
     if (currentStep == 1) {
       Serial.println("Flipping wood...");
+      Serial.print("Moving servo to flip position: ");
+      Serial.print(SERVO_FLIP_POSITION);
+      Serial.println(" degrees");
       flipServo.write(SERVO_FLIP_POSITION);  // Move to flip position
       stepStartTime = millis();
       currentStep = 2;
     }
     
-    // Step 2: Wait for servo to finish moving
+    // Step 2: Wait for servo to finish moving to flip position
     else if (currentStep == 2) {
       if (millis() - stepStartTime >= SERVO_MOVE_TIME) {
         Serial.println("Moving servo back home...");
+        Serial.print("Moving servo to home position: ");
+        Serial.print(SERVO_HOME_POSITION);
+        Serial.println(" degrees");
         flipServo.write(SERVO_HOME_POSITION);  // Move back to home
+        stepStartTime = millis();  // Reset timer for return movement
+        currentStep = 3;  // Go to step 3 to wait for return
+      }
+    }
+    
+    // Step 3: Wait for servo to return to home position
+    else if (currentStep == 3) {
+      if (millis() - stepStartTime >= SERVO_MOVE_TIME) {
+        Serial.println("Servo returned home, starting second feed...");
         currentState = 4;  // Go to second feeding
         stateStartTime = millis();
         currentStep = 1;
