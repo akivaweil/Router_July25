@@ -112,7 +112,7 @@ void setup() {
     initIdleState();
 
     digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
-    delay(1000);
+    delay(FEED_CYLINDER_EXTEND_TIME);
     digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW extends the cylinder (idle position)
     
     Serial.println("System initialized and ready");

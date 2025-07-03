@@ -31,5 +31,5 @@ const unsigned long FLIP_SERVO_MOVE_DELAY = 1200;      // 1500ms wait for servo 
 const unsigned long MANUAL_START_DEBOUNCE = 30;       // 30ms debounce for manual start button
 
 // Servo settings
-const int FLIP_SERVO_HOME_POSITION = 0;               // 0 degrees servo position
-const int FLIP_SERVO_FLIP_POSITION = 100;             // 100 degrees servo position for flipping 
+const int FLIP_SERVO_HOME_POSITION = 105;               // 100 degrees servo position
+const int FLIP_SERVO_FLIP_POSITION = 0;             // 0 degrees servo position for flipping 
