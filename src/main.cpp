@@ -8,7 +8,6 @@
 #include <ESP32Servo.h>
 #include "../include/Config.h"
 #include "../include/Pins_Definitions.h"
-#include "Config/Servo_Config.h"
 
 //* ************************************************************************
 //* ************************ STATE MACHINE DEFINITIONS *******************
@@ -105,8 +104,8 @@ void setup() {
     Serial.println("✓ Servo attachment completed - Commands will be sent regardless of attach status");
     
     // Set initial servo position to home with forced write
-    flipServo.write(ROUTER_SERVO_HOME_POSITION);
-    Serial.printf("Servo initialized and set to home position: %d degrees\n", ROUTER_SERVO_HOME_POSITION);
+    flipServo.write(FLIP_SERVO_HOME_POSITION);
+    Serial.printf("Servo initialized and set to home position: %d degrees\n", FLIP_SERVO_HOME_POSITION);
     
     // Initialize with IDLE state
     currentState = STATE_IDLE;

@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include <ESP32Servo.h>
-#include "../../include/Config/Servo_Config.h"
+#include "../../include/Config.h"
 
 //* ************************************************************************
 //* ************************ SERVO FUNCTIONS ******************************
@@ -16,14 +16,14 @@ extern Servo flipServo;
 
 void moveServoToHome() {
     // Move servo to home position using Stage 1 approach
-    flipServo.write(ROUTER_SERVO_HOME_POSITION);
-    Serial.printf("FORCED Servo command sent: %d degrees (home position)\n", ROUTER_SERVO_HOME_POSITION);
+    flipServo.write(FLIP_SERVO_HOME_POSITION);
+    Serial.printf("FORCED Servo command sent: %d degrees (home position)\n", FLIP_SERVO_HOME_POSITION);
 }
 
 void moveServoToActive() {
     // Move servo to active position using Stage 1 approach  
-    flipServo.write(ROUTER_SERVO_ACTIVE_POSITION);
-    Serial.printf("FORCED Servo command sent: %d degrees (active position)\n", ROUTER_SERVO_ACTIVE_POSITION);
+    flipServo.write(FLIP_SERVO_FLIP_POSITION);
+    Serial.printf("FORCED Servo command sent: %d degrees (active position)\n", FLIP_SERVO_FLIP_POSITION);
 }
 
 void moveServoToAngle(int angle) {
