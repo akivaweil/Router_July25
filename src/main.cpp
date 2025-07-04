@@ -66,10 +66,30 @@ void setup() {
     // Make sure cylinder starts in safe position (retracted)
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
 
-    // Configure stepper motor
-    flipStepper.setMaxSpeed(STEPPER_MAX_SPEED);
+    // Configure stepper motor and perform homing sequence
     flipStepper.setAcceleration(STEPPER_ACCELERATION);
-    flipStepper.setCurrentPosition(0); // Assume it starts at 0
+
+    //! ************************************************************************
+    //! HOMING SEQUENCE: Rotate -50 degrees and set as zero
+    //! ************************************************************************
+    // 1. Set homing speed
+    flipStepper.setMaxSpeed(HOMING_SPEED); 
+
+    // 2. Calculate steps for homing
+    long homing_steps = (STEPS_PER_REVOLUTION / 360.0f) * HOMING_DEGREES;
+
+    // 3. Move to the homing position
+    flipStepper.moveTo(homing_steps);
+    while (flipStepper.distanceToGo() != 0)
+    {
+        flipStepper.run();
+    }
+    
+    // 4. Set the current position as the new zero
+    flipStepper.setCurrentPosition(0);
+
+    // 5. Restore normal operating speed
+    flipStepper.setMaxSpeed(STEPPER_MAX_SPEED);
 
     // Initialize OTA functionality
     initOTA();

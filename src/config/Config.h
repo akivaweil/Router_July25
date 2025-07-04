@@ -12,9 +12,11 @@ const float STEPPER_MOVE_DELAY = 1000.0f;        // Time to wait after telling s
 
 //! *********************** STEPPER SETTINGS *****************************
 const float STEPS_PER_REVOLUTION = 3200.0f; // Steps for one full revolution
-const float FLIP_DEGREES = 90.0f;           // Degrees to turn for the flip. Was 88, 90 is cleaner.
+const float FLIP_DEGREES = 120.0f;           // Degrees to turn for the flip.
 const float STEPS_FOR_FLIP = (STEPS_PER_REVOLUTION / 360.0f) * FLIP_DEGREES;
 
 // Stepper motor speed and acceleration settings
-const float STEPPER_MAX_SPEED = 1000.0f;      // Maximum speed in steps per second
-const float STEPPER_ACCELERATION = 500.0f;  // Acceleration in steps per second per second 
+const float HOMING_SPEED = 500.0f;           // Homing speed in steps per second
+const float HOMING_DEGREES = -50.0f;         // Degrees to move for homing
+const float STEPPER_MAX_SPEED = 5000.0f;      // Maximum speed in steps per second
+const float STEPPER_ACCELERATION = 5000.0f;  // Acceleration in steps per second per second 
