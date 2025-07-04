@@ -11,6 +11,7 @@
 
 #include <Arduino.h>
 #include <AccelStepper.h>
+#include <Bounce2.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
@@ -30,6 +31,10 @@ void handleStateMachine();
 // ************************************************************************
 // ********************** GLOBAL VARIABLES ********************************
 // ************************************************************************
+
+// Create Bounce objects for debouncing
+Bounce startSensorDebouncer = Bounce();
+Bounce manualStartDebouncer = Bounce();
 
 // Create stepper object
 AccelStepper flipStepper(AccelStepper::DRIVER, FLIP_STEPPER_STEP_PIN, FLIP_STEPPER_DIR_PIN);
@@ -62,6 +67,12 @@ void setup() {
     pinMode(START_SENSOR_PIN, INPUT_PULLDOWN);
     pinMode(MANUAL_START_PIN, INPUT_PULLDOWN);
     pinMode(FEED_CYLINDER_PIN, OUTPUT);
+
+    // Setup the debouncers
+    startSensorDebouncer.attach(START_SENSOR_PIN);
+    startSensorDebouncer.interval(30); // 30ms debounce
+    manualStartDebouncer.attach(MANUAL_START_PIN);
+    manualStartDebouncer.interval(30); // 30ms debounce
 
     // Make sure cylinder starts in safe position (retracted)
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
@@ -99,6 +110,10 @@ void setup() {
 // ***************************** LOOP *************************************
 // ************************************************************************
 void loop() {
+    // Update the debouncers
+    startSensorDebouncer.update();
+    manualStartDebouncer.update();
+
     // Handle Over-The-Air updates
     handleOTA();
 
