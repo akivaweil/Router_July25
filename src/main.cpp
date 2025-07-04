@@ -21,18 +21,18 @@ void handleOTA();
 
 // Pin numbers for hardware connections
 const int START_SENSOR_PIN = 48;     // Button or sensor to start the cycle
-const int MANUAL_START_PIN = 17;     // Manual start button
+const int MANUAL_START_PIN = 19;     // Manual start button
 const int FEED_CYLINDER_PIN = 41;    // Controls the feeding cylinder
-const int FLIP_SERVO_PIN = 16;       // Controls the flipping servo
+const int FLIP_SERVO_PIN = 18;       // Controls the flipping servo
 
 // Timing settings (in milliseconds)
 const int FEEDING_START_DELAY = 600;        // Wait before starting to feed
 const int FEED_TIME = 2200;                 // How long to push wood through router
-const int SERVO_MOVE_TIME = 1500;           // Time for servo to move and flip wood
+const int SERVO_MOVE_TIME = 1000;           // Time for servo to move and flip wood
 
 // Servo positions (in degrees)
-const int SERVO_HOME_POSITION = 105;        // Normal position
-const int SERVO_FLIP_POSITION = 5;          // Position to flip wood
+const int SERVO_HOME_POSITION = 88;        // Normal position
+const int SERVO_FLIP_POSITION = 0;          // Position to flip wood
 
 // Create servo object
 Servo flipServo;
@@ -193,7 +193,7 @@ void loop() {
     
     // Step 1: Wait a little bit before starting
     if (currentStep == 1) {
-      if (millis() - stateStartTime >= FEEDING_START_DELAY) {
+      if (millis() - stateStartTime >= 0) {
         Serial.println("Starting second feed...");
         digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH = retract = push wood
         stepStartTime = millis();
