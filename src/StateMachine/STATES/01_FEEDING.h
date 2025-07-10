@@ -21,7 +21,7 @@ void handleFeedingState() {
     }
     
     //! ************************************************************************
-    //! STEP 2: WAIT FOR FEED TIME TO ELAPse
+    //! STEP 2: WAIT FOR FEED TIME TO ELAPSE
     //! ************************************************************************
     else if (currentStep == 2.0f) {
         log_state_step("State: FEEDING - Step 2: Waiting for feed time to elapse...");

@@ -4,7 +4,7 @@
  * This program controls a router machine that:
  * 1. Waits for a start signal (IDLE)
  * 2. Feeds wood through router (FEEDING)
- * 3. Flips the wood over with a stepper motor (FLIPPING)
+ * 3. Flips the wood over with a servo motor (FLIPPING)
  * 4. Feeds wood again (FEEDING2)
  * 5. Goes back to waiting (IDLE)
  */

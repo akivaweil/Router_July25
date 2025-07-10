@@ -22,10 +22,9 @@ void handleFlippingState() {
     else if (currentStep == 2.0f) {
         log_state_step("State: FLIPPING - Step 2: Waiting for servo to finish moving.");
         // Wait for the servo to get to the flip position
-        if (millis() - stepStartTime >= SERVO_MOVE_DELAY) {
+        if (flipServo.hasReachedTarget()) {
             Serial.println("                 - Servo has reached flip position.");
             currentStep = 3.0f;
-            stepStartTime = millis();
         }
     }
     
@@ -44,7 +43,7 @@ void handleFlippingState() {
     //! ************************************************************************
     else if (currentStep == 4.0f) {
         log_state_step("State: FLIPPING - Step 4: Waiting for servo to return home.");
-        if (millis() - stepStartTime >= SERVO_MOVE_DELAY) {
+        if (flipServo.hasReachedTarget()) {
             Serial.println("                 - Servo has returned home. Transitioning to FEEDING2 state.");
             currentState = S_FEEDING2;  // Go to second feeding
             stateStartTime = millis();

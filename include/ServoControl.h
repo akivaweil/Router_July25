@@ -19,6 +19,9 @@ private:
 public:
     ServoControl();
     
+    float targetAngle; // Publicly accessible target angle
+    unsigned long lastUpdateTime; // Time of the last update
+
     void init(int servoPin, int pwmChannel = 7, int freq = 50, int res = 14);
     void write(float angle);
     void writeMicroseconds(int microseconds);
@@ -26,6 +29,8 @@ public:
     
     void setPulseWidthRange(int minUs, int maxUs);
     void setAngleRange(int minDeg, int maxDeg);
+    
+    bool hasReachedTarget();
 };
 
 #endif 

@@ -1,4 +1,5 @@
 #include "ServoControl.h"
+#include "config/Config.h" // Include config for SERVO_MOVE_DELAY
 
 ServoControl::ServoControl() {
     pin = -1;
@@ -37,6 +38,8 @@ void ServoControl::write(float angle) {
     if (channel >= 0) {
         int duty = angleToDuty(angle);
         ledcWrite(channel, duty);
+        targetAngle = angle; // Store the target angle
+        lastUpdateTime = millis(); // Record the time of update
     }
 }
 
@@ -63,4 +66,9 @@ void ServoControl::setPulseWidthRange(int minUs, int maxUs) {
 void ServoControl::setAngleRange(int minDeg, int maxDeg) {
     minAngle = minDeg;
     maxAngle = maxDeg;
+} 
+
+bool ServoControl::hasReachedTarget() {
+    // Check if enough time has passed since the last write() command
+    return millis() - lastUpdateTime >= SERVO_MOVE_DELAY;
 } 
