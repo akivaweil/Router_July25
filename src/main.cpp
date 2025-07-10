@@ -10,10 +10,10 @@
  */
 
 #include <Arduino.h>
-#include <AccelStepper.h>
 #include <Bounce2.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
+#include "ServoControl.h" // Include the custom servo library
 
 // ************************************************************************
 // ********************** PROJECT FILES ***********************************
@@ -36,17 +36,32 @@ void handleStateMachine();
 Bounce startSensorDebouncer = Bounce();
 Bounce manualStartDebouncer = Bounce();
 
-// Create stepper object
-AccelStepper flipStepper(AccelStepper::DRIVER, FLIP_STEPPER_STEP_PIN, FLIP_STEPPER_DIR_PIN);
+// Create servo object
+ServoControl flipServo;
 
 // Keep track of what the machine is doing
-enum State { S_IDLE, S_FEEDING, S_FLIPPING, S_FEEDING2 };
+enum State { S_NONE, S_IDLE, S_FEEDING, S_FLIPPING, S_FEEDING2 };
 State currentState = S_IDLE;
+
+// To prevent log spam, keep track of the last logged state and step
+State lastLoggedState = S_NONE;
+float lastLoggedStep = 0.0f;
 
 // Variables to remember when things started
 unsigned long stateStartTime = 0;
 unsigned long stepStartTime = 0;
 float currentStep = 0.0f; // Using float as requested
+
+// ************************************************************************
+// ********************** HELPER FUNCTIONS ********************************
+// ************************************************************************
+void log_state_step(const char* message) {
+    if (currentState != lastLoggedState || currentStep != lastLoggedStep) {
+        Serial.println(message);
+        lastLoggedState = currentState;
+        lastLoggedStep = currentStep;
+    }
+}
 
 // ************************************************************************
 // ********************** STATE MACHINE FILES *****************************
@@ -60,6 +75,9 @@ float currentStep = 0.0f; // Using float as requested
 // **************************** SETUP *************************************
 // ************************************************************************
 void setup() {
+    // --- START SERIAL ---
+    Serial.begin(115200);
+    
     // --- DISABLE BROWNOUT DETECTOR ---
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
@@ -77,30 +95,18 @@ void setup() {
     // Make sure cylinder starts in safe position (retracted)
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
 
-    // Configure stepper motor and perform homing sequence
-    flipStepper.setAcceleration(STEPPER_ACCELERATION);
+    // Configure servo motor and perform test sequence
+    flipServo.init(FLIP_SERVO_PIN);
 
     //! ************************************************************************
-    //! HOMING SEQUENCE: Rotate -50 degrees and set as zero
+    //! SERVO TEST SEQUENCE
     //! ************************************************************************
-    // 1. Set homing speed
-    flipStepper.setMaxSpeed(HOMING_SPEED); 
-
-    // 2. Calculate steps for homing
-    long homing_steps = (STEPS_PER_REVOLUTION / 360.0f) * HOMING_DEGREES;
-
-    // 3. Move to the homing position
-    flipStepper.moveTo(homing_steps);
-    while (flipStepper.distanceToGo() != 0)
-    {
-        flipStepper.run();
-    }
-    
-    // 4. Set the current position as the new zero
-    flipStepper.setCurrentPosition(0);
-
-    // 5. Restore normal operating speed
-    flipStepper.setMaxSpeed(STEPPER_MAX_SPEED);
+    flipServo.write(SERVO_TEST_START_ANGLE);
+    delay(500);
+    flipServo.write(SERVO_TEST_END_ANGLE);
+    delay(500);
+    flipServo.write(SERVO_HOME_ANGLE);
+    delay(500); // Give it time to get home before starting
 
     // Initialize OTA functionality
     initOTA();
@@ -119,9 +125,6 @@ void loop() {
 
     // Run the state machine
     handleStateMachine();
-
-    // The stepper motor must be run constantly
-    flipStepper.run();
 }
 
 // ************************************************************************

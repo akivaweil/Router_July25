@@ -3,43 +3,49 @@
 // ************************************************************************
 // *********************** FLIPPING STATE *********************************
 // ************************************************************************
+void log_state_step(const char* message);
 
 void handleFlippingState() {
     //! ************************************************************************
-    //! STEP 1: MOVE STEPPER TO FLIP POSITION
+    //! STEP 1: MOVE SERVO TO FLIP POSITION
     //! ************************************************************************
     if (currentStep == 1.0f) {
-        flipStepper.moveTo(STEPS_FOR_FLIP);
+        log_state_step("State: FLIPPING - Step 1: Moving servo to flip position.");
+        flipServo.write(FLIP_ANGLE);
         stepStartTime = millis();
         currentStep = 2.0f;
     }
     
     //! ************************************************************************
-    //! STEP 2: WAIT FOR STEPPER TO FINISH MOVING
+    //! STEP 2: WAIT FOR SERVO TO FINISH MOVING
     //! ************************************************************************
     else if (currentStep == 2.0f) {
-        // Wait until the stepper has reached its target
-        if (flipStepper.distanceToGo() == 0) {
-            // Add a small delay for stability if needed, but for now we proceed
+        log_state_step("State: FLIPPING - Step 2: Waiting for servo to finish moving.");
+        // Wait for the servo to get to the flip position
+        if (millis() - stepStartTime >= SERVO_MOVE_DELAY) {
+            Serial.println("                 - Servo has reached flip position.");
             currentStep = 3.0f;
             stepStartTime = millis();
         }
     }
     
     //! ************************************************************************
-    //! STEP 3: MOVE STEPPER BACK TO HOME POSITION
+    //! STEP 3: MOVE SERVO BACK TO HOME POSITION
     //! ************************************************************************
     else if (currentStep == 3.0f) {
-        flipStepper.moveTo(0);
+        log_state_step("State: FLIPPING - Step 3: Moving servo back to home position.");
+        flipServo.write(SERVO_HOME_ANGLE);
         stepStartTime = millis();
         currentStep = 4.0f;
     }
 
     //! ************************************************************************
-    //! STEP 4: WAIT FOR STEPPER TO RETURN HOME
+    //! STEP 4: WAIT FOR SERVO TO RETURN HOME
     //! ************************************************************************
     else if (currentStep == 4.0f) {
-        if (flipStepper.distanceToGo() == 0) {
+        log_state_step("State: FLIPPING - Step 4: Waiting for servo to return home.");
+        if (millis() - stepStartTime >= SERVO_MOVE_DELAY) {
+            Serial.println("                 - Servo has returned home. Transitioning to FEEDING2 state.");
             currentState = S_FEEDING2;  // Go to second feeding
             stateStartTime = millis();
             currentStep = 1.0f;
