@@ -16,7 +16,7 @@ const float SERVO_MOVE_DELAY      = 1000.0f;    // Time allotted for the servo t
 // --- SERVO ANGLES (degrees) ---
 // Purpose: Defines the angular positions for the flip servo.
 // ------------------------------------------------------------------------
-const float SERVO_HOME_ANGLE       = 120.0f;   // The safe/home position for the servo.
+const float SERVO_HOME_ANGLE       = 123.0f;   // The safe/home position for the servo.
 const float FLIP_ANGLE             = 20.0f;    // The target angle to flip the material.
-const float SERVO_TEST_START_ANGLE = 180.0f;   // Start angle for the power-on test sequence.
-const float SERVO_TEST_END_ANGLE   = 0.0f;     // End angle for the power-on test sequence. 
+const float SERVO_TEST_START_ANGLE = 150.0f;   // Start angle for the power-on test sequence.
+const float SERVO_TEST_END_ANGLE   = 100.0f;     // End angle for the power-on test sequence. 

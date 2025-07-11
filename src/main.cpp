@@ -102,11 +102,11 @@ void setup() {
     //! SERVO TEST SEQUENCE
     //! ************************************************************************
     flipServo.write(SERVO_TEST_START_ANGLE);
-    delay(500);
+    delay(1000);
     flipServo.write(SERVO_TEST_END_ANGLE);
-    delay(500);
+    delay(1000);
     flipServo.write(SERVO_HOME_ANGLE);
-    delay(500); // Give it time to get home before starting
+    delay(5300); // Give it time to get home before starting
 
     // Initialize OTA functionality
     initOTA();
