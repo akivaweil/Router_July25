@@ -13,7 +13,7 @@ const char* WIFI_SSID = "Everwood";
 const char* WIFI_PASSWORD = "Everwood-Staff";
 
 // OTA settings
-const char* OTA_HOSTNAME = "Router-ESP32";
+const char* OTA_HOSTNAME = "Router-July25-ESP32";
 const char* OTA_PASSWORD = "";  // No password for simplicity
 
 //* ************************************************************************
@@ -70,7 +70,7 @@ void initOTA() {
     });
     
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        Serial.printf("OTA Progress: %u%%\r", (progress / (total / 100)));
+        // Progress tracking disabled to reduce spam
     });
     
     ArduinoOTA.onError([](ota_error_t error) {

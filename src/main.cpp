@@ -88,7 +88,7 @@ void setup() {
 
     // Setup the debouncers
     startSensorDebouncer.attach(START_SENSOR_PIN);
-    startSensorDebouncer.interval(30); // 30ms debounce
+    startSensorDebouncer.interval(5); // 30ms debounce
     manualStartDebouncer.attach(MANUAL_START_PIN);
     manualStartDebouncer.interval(30); // 30ms debounce
 
