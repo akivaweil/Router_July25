@@ -1,164 +1,148 @@
-//* ************************************************************************
-//* ************************ MAIN ROUTER CONTROL *************************
-//* ************************************************************************
-//! Barebones ESP32 Router Control System
-//! State Flow: IDLE -> FEEDING -> FLIPPING -> IDLE
+/*
+ * ESP32 Router Control System
+ *
+ * This program controls a router machine that:
+ * 1. Waits for a start signal (IDLE)
+ * 2. Feeds wood through router (FEEDING)
+ * 3. Flips the wood over with a servo motor (FLIPPING)
+ * 4. Feeds wood again (FEEDING2)
+ * 5. Goes back to waiting (IDLE)
+ */
 
 #include <Arduino.h>
-#include "../include/Config.h"
-#include "../include/Pins_Definitions.h"
-#include "../include/ServoMotor.h"
+#include <Bounce2.h>
+#include "soc/soc.h"
+#include "soc/rtc_cntl_reg.h"
+#include "ServoControl.h" // Include the custom servo library
 
-//* ************************************************************************
-//* ************************ STATE MACHINE DEFINITIONS *******************
-//* ************************************************************************
+// ************************************************************************
+// ********************** PROJECT FILES ***********************************
+// ************************************************************************
+#include "config/Pins_Definitions.h"
+#include "config/Config.h"
 
-// State enumeration
-enum SystemState {
-    STATE_IDLE = 1,
-    STATE_FEEDING,
-    STATE_FLIPPING,
-    STATE_FEEDING2
-};
+// ************************************************************************
+// ********************** FORWARD DECLARATIONS ****************************
+// ************************************************************************
+void initOTA();
+void handleOTA();
+void handleStateMachine();
 
-// Current system state
-static SystemState currentState = STATE_IDLE;
+// ************************************************************************
+// ********************** GLOBAL VARIABLES ********************************
+// ************************************************************************
 
-//* ************************************************************************
-//* ************************ SERVO MOTOR INSTANCE ************************
-//* ************************************************************************
+// Create Bounce objects for debouncing
+Bounce startSensorDebouncer = Bounce();
+Bounce manualStartDebouncer = Bounce();
 
-// Global servo motor instance using the robust ServoMotor class
-ServoMotor flipServo(FLIP_SERVO_PIN);
+// Create servo object
+ServoControl flipServo;
 
-//* ************************************************************************
-//* ************************ FUNCTION DECLARATIONS ***********************
-//* ************************************************************************
+// Keep track of what the machine is doing
+enum State { S_NONE, S_IDLE, S_FEEDING, S_FLIPPING, S_FEEDING2 };
+State currentState = S_IDLE;
 
-// IDLE state functions (01_IDLE.cpp)
-void initIdleState();
-void executeIdleState();
-bool shouldExitIdleState();
-void resetIdleState();
+// To prevent log spam, keep track of the last logged state and step
+State lastLoggedState = S_NONE;
+float lastLoggedStep = 0.0f;
 
-// FEEDING state functions (Router Cutting Cycle/02_FEEDING.cpp)
-void initFeedingState();
-void executeFeedingState();
-bool isFeedingComplete();
-void resetFeedingState();
+// Variables to remember when things started
+unsigned long stateStartTime = 0;
+unsigned long stepStartTime = 0;
+float currentStep = 0.0f; // Using float as requested
 
-// FLIPPING state functions (Router Cutting Cycle/03_FLIPPING.cpp)
-void initFlippingState();
-void executeFlippingState();
-bool isFlippingComplete();
-void resetFlippingState();
-
-// FEEDING2 state functions (same as FEEDING - second cycle)
-void initFeeding2State();
-void executeFeeding2State();
-bool isFeeding2Complete();
-void resetFeeding2State();
-
-//* ************************************************************************
-//* ************************ MAIN SETUP AND LOOP *************************
-//* ************************************************************************
-
-//! Arduino setup function
-void setup() {
-    // Initialize serial communication
-    Serial.begin(115200);
-    delay(300); // Allow serial to initialize
-    
-    Serial.println();
-    Serial.println("===========================================");
-    Serial.println("ESP32 Router Control System - Barebones");
-    Serial.println("===========================================");
-    Serial.println("State Flow: IDLE -> FEEDING -> FLIPPING -> FEEDING2 -> IDLE");
-    Serial.println();
-
-    // Configure pins
-    configureInputPulldown(START_SENSOR_PIN);
-    configureInputPulldown(MANUAL_START_PIN);
-    configureOutput(FEED_CYLINDER_PIN);
-    
-    // Initialize servo motor with starting angle
-    flipServo.init(0.0f);  // Initialize at 0 degrees
-    Serial.println("Servo motor initialized successfully");
-    
-    // Initialize with IDLE state
-    currentState = STATE_IDLE;
-    initIdleState();
-
-    digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
-    delay(200);
-    digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW extends the cylinder (idle position)
-    delay(200);
-       digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
-    delay(200);
-    digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW extends the cylinder (idle position)
-    delay(200);
-       digitalWrite(FEED_CYLINDER_PIN, HIGH);  // HIGH retracts the cylinder (cutting cycle position)
-    delay(200);
-    digitalWrite(FEED_CYLINDER_PIN, LOW);  // LOW extends the cylinder (idle position)
-    
-    Serial.println("System initialized and ready");
+// ************************************************************************
+// ********************** HELPER FUNCTIONS ********************************
+// ************************************************************************
+void log_state_step(const char* message) {
+    if (currentState != lastLoggedState || currentStep != lastLoggedStep) {
+        Serial.println(message);
+        lastLoggedState = currentState;
+        lastLoggedStep = currentStep;
+    }
 }
 
-//! Arduino main loop function
+// ************************************************************************
+// ********************** STATE MACHINE FILES *****************************
+// ************************************************************************
+#include "StateMachine/STATES/00_IDLE.h"
+#include "StateMachine/STATES/01_FEEDING.h"
+#include "StateMachine/STATES/02_FLIPPING.h"
+#include "StateMachine/STATES/03_FEEDING2.h"
+
+// ************************************************************************
+// **************************** SETUP *************************************
+// ************************************************************************
+void setup() {
+    // --- START SERIAL ---
+    Serial.begin(115200);
+    
+    // --- DISABLE BROWNOUT DETECTOR ---
+    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+
+    // Set up the pins
+    pinMode(START_SENSOR_PIN, INPUT_PULLDOWN);
+    pinMode(MANUAL_START_PIN, INPUT_PULLDOWN);
+    pinMode(FEED_CYLINDER_PIN, OUTPUT);
+
+    // Setup the debouncers
+    startSensorDebouncer.attach(START_SENSOR_PIN);
+    startSensorDebouncer.interval(5); // 30ms debounce
+    manualStartDebouncer.attach(MANUAL_START_PIN);
+    manualStartDebouncer.interval(30); // 30ms debounce
+
+    // Make sure cylinder starts in safe position (retracted)
+    digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
+
+    // Configure servo motor and perform test sequence
+    flipServo.init(FLIP_SERVO_PIN);
+
+    //! ************************************************************************
+    //! SERVO TEST SEQUENCE
+    //! ************************************************************************
+    flipServo.write(SERVO_TEST_START_ANGLE);
+    delay(1000);
+    flipServo.write(SERVO_TEST_END_ANGLE);
+    delay(1000);
+    flipServo.write(SERVO_HOME_ANGLE);
+    delay(5300); // Give it time to get home before starting
+
+    // Initialize OTA functionality
+    initOTA();
+}
+
+// ************************************************************************
+// ***************************** LOOP *************************************
+// ************************************************************************
 void loop() {
-    // Execute current state
+    // Update the debouncers
+    startSensorDebouncer.update();
+    manualStartDebouncer.update();
+
+    // Handle Over-The-Air updates
+    handleOTA();
+
+    // Run the state machine
+    handleStateMachine();
+}
+
+// ************************************************************************
+// ********************** STATE MACHINE HANDLER ***************************
+// ************************************************************************
+void handleStateMachine() {
     switch (currentState) {
-        case STATE_IDLE:
-            executeIdleState();
-            
-            // Check for transition to FEEDING
-            if (shouldExitIdleState()) {
-                currentState = STATE_FEEDING;
-                initFeedingState();
-            }
+        case S_IDLE:
+            handleIdleState();
             break;
-            
-        case STATE_FEEDING:
-            executeFeedingState();
-            
-            // Check for transition to FLIPPING
-            if (isFeedingComplete()) {
-                resetFeedingState();
-                currentState = STATE_FLIPPING;
-                initFlippingState();
-            }
+        case S_FEEDING:
+            handleFeedingState();
             break;
-            
-        case STATE_FLIPPING:
-            executeFlippingState();
-            
-            // Check for transition to FEEDING2
-            if (isFlippingComplete()) {
-                resetFlippingState();
-                currentState = STATE_FEEDING2;
-                initFeeding2State();
-            }
+        case S_FLIPPING:
+            handleFlippingState();
             break;
-            
-        case STATE_FEEDING2:
-            executeFeeding2State();
-            
-            // Check for transition back to IDLE
-            if (isFeeding2Complete()) {
-                resetFeeding2State();
-                currentState = STATE_IDLE;
-                initIdleState();
-            }
-            break;
-            
-        default:
-            // Should never reach here, but safety fallback
-            Serial.println("ERROR: Unknown state, returning to IDLE");
-            currentState = STATE_IDLE;
-            initIdleState();
+        case S_FEEDING2:
+            handleFeeding2State();
             break;
     }
-    
-    // Small delay to prevent excessive CPU usage
-    delay(10);
 }
