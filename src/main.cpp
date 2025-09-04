@@ -96,7 +96,7 @@ void setup() {
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
 
     // Configure servo motor and perform test sequence
-    flipServo.init(FLIP_SERVO_PIN);
+    flipServo.init(FLIP_SERVO_PIN, 0, 50, 14); // pin, channel, frequency, resolution
 
     //! ************************************************************************
     //! SERVO CALIBRATION TEST
