@@ -95,44 +95,9 @@ void setup() {
     // Make sure cylinder starts in safe position (retracted)
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
 
-    // Configure servo motor and perform test sequence
+    // Configure servo motor and move to home position
     flipServo.init(FLIP_SERVO_PIN, 0, 50, 14); // pin, channel, frequency, resolution
-
-    //! ************************************************************************
-    //! SERVO CALIBRATION TEST
-    //! ************************************************************************
-    Serial.println("=== SERVO CALIBRATION TEST ===");
-    Serial.println("Testing different pulse widths to find correct range...");
-    
-    // Test with different pulse width ranges
-    Serial.println("Testing standard range (500-2500μs):");
-    flipServo.setPulseWidthRange(500, 2500);
-    flipServo.write(90); // Should be middle
-    delay(2000);
-    
-    Serial.println("Testing extended range (400-2600μs):");
-    flipServo.setPulseWidthRange(400, 2600);
-    flipServo.write(90); // Should be middle
-    delay(2000);
-    
-    Serial.println("Testing narrow range (600-2300μs):");
-    flipServo.setPulseWidthRange(600, 2300);
-    flipServo.write(90); // Should be middle
-    delay(2000);
-    
-    // Reset to standard range
-    flipServo.setPulseWidthRange(500, 2500);
-    
-    //! ************************************************************************
-    //! SERVO TEST SEQUENCE
-    //! ************************************************************************
-    Serial.println("=== SERVO TEST SEQUENCE ===");
-    flipServo.write(SERVO_TEST_START_ANGLE);
-    delay(1000);
-    flipServo.write(SERVO_TEST_END_ANGLE);
-    delay(1000);
     flipServo.write(SERVO_HOME_ANGLE);
-    delay(5300); // Give it time to get home before starting
 
     // Initialize OTA functionality
     initOTA();
