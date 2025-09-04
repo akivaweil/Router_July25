@@ -6,8 +6,8 @@ ServoControl::ServoControl() {
     channel = -1;
     frequency = 50;
     resolution = 14;
-    minPulseWidth = 544;  // Corresponds to 0 degrees (more standard)
-    maxPulseWidth = 2400; // Corresponds to 180 degrees (more standard)
+    minPulseWidth = 500;  // Corresponds to 0 degrees
+    maxPulseWidth = 2500; // Corresponds to 180 degrees
     minAngle = 0;
     maxAngle = 180;
 }

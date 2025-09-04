@@ -99,8 +99,34 @@ void setup() {
     flipServo.init(FLIP_SERVO_PIN);
 
     //! ************************************************************************
+    //! SERVO CALIBRATION TEST
+    //! ************************************************************************
+    Serial.println("=== SERVO CALIBRATION TEST ===");
+    Serial.println("Testing different pulse widths to find correct range...");
+    
+    // Test with different pulse width ranges
+    Serial.println("Testing standard range (500-2500μs):");
+    flipServo.setPulseWidthRange(500, 2500);
+    flipServo.write(90); // Should be middle
+    delay(2000);
+    
+    Serial.println("Testing extended range (400-2600μs):");
+    flipServo.setPulseWidthRange(400, 2600);
+    flipServo.write(90); // Should be middle
+    delay(2000);
+    
+    Serial.println("Testing narrow range (600-2300μs):");
+    flipServo.setPulseWidthRange(600, 2300);
+    flipServo.write(90); // Should be middle
+    delay(2000);
+    
+    // Reset to standard range
+    flipServo.setPulseWidthRange(500, 2500);
+    
+    //! ************************************************************************
     //! SERVO TEST SEQUENCE
     //! ************************************************************************
+    Serial.println("=== SERVO TEST SEQUENCE ===");
     flipServo.write(SERVO_TEST_START_ANGLE);
     delay(1000);
     flipServo.write(SERVO_TEST_END_ANGLE);
