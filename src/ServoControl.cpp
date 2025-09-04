@@ -6,8 +6,8 @@ ServoControl::ServoControl() {
     channel = -1;
     frequency = 50;
     resolution = 14;
-    minPulseWidth = 500;  // Corresponds to 0 degrees
-    maxPulseWidth = 2500; // Corresponds to 180 degrees
+    minPulseWidth = 544;  // Corresponds to 0 degrees (more standard)
+    maxPulseWidth = 2400; // Corresponds to 180 degrees (more standard)
     minAngle = 0;
     maxAngle = 180;
 }
@@ -37,6 +37,14 @@ int ServoControl::angleToDuty(float angle) {
 void ServoControl::write(float angle) {
     if (channel >= 0) {
         int duty = angleToDuty(angle);
+        int pulseWidth = map(angle, minAngle, maxAngle, minPulseWidth, maxPulseWidth);
+        Serial.print("Servo: Setting angle ");
+        Serial.print(angle);
+        Serial.print("°, duty=");
+        Serial.print(duty);
+        Serial.print(", pulseWidth=");
+        Serial.print(pulseWidth);
+        Serial.println("μs");
         ledcWrite(channel, duty);
         targetAngle = angle; // Store the target angle
         lastUpdateTime = millis(); // Record the time of update
