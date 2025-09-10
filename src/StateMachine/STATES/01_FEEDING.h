@@ -16,16 +16,18 @@ void handleFeedingState() {
     if (currentStep == 1.0f) {
         log_state_step("State: FEEDING - Step 1: Starting servo sequence and feeding delay simultaneously...");
         
-        // Start servo sequence on first call
-        if (millis() - stateStartTime < 100) { // Only on first call (within 100ms of state start)
-            Serial.println("                 - Moving servo to 120°...");
+        // Start servo sequence after 1 second delay
+        static bool servoStarted = false;
+        if (!servoStarted && millis() - stateStartTime >= SERVO_START_DELAY) {
+            Serial.println("                 - Servo delay complete. Moving servo to 120°...");
             flipServo.write(SERVO_INITIAL_ANGLE);
+            servoStarted = true;
         }
         
         // Check if servo reached 120° and start wait
         static unsigned long servoWaitStart = 0;
         static bool servoWaitStarted = false;
-        if (!servoWaitStarted && flipServo.hasReachedTarget()) {
+        if (servoStarted && !servoWaitStarted && flipServo.hasReachedTarget()) {
             Serial.println("                 - Servo reached 120°. Waiting 500ms...");
             servoWaitStart = millis();
             servoWaitStarted = true;
