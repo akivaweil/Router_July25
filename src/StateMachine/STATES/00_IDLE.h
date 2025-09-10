@@ -21,16 +21,9 @@ void handleIdleState() {
 
     // Check if start button pressed or sensor triggered
     if (startSensorDebouncer.read() || manualStartDebouncer.read()) {
-        Serial.println("Start signal received! Beginning initial servo sequence.");
-        
-        //! ************************************************************************
-        //! INITIAL SERVO SEQUENCE: 120° → wait 500ms → 104°
-        //! ************************************************************************
-        Serial.println("                 - Moving servo to 120 degrees...");
-        flipServo.write(SERVO_INITIAL_ANGLE);
-        stepStartTime = millis();
-        currentStep = 1.0f;
-        currentState = S_FEEDING;  // Go to FEEDING state to handle the sequence
+        Serial.println("Start signal received! Starting parallel servo sequence and feeding process.");
+        currentState = S_FEEDING;  // Go to FEEDING state to handle both processes
         stateStartTime = millis();
+        currentStep = 1.0f;
     }
 } 

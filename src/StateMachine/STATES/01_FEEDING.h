@@ -11,61 +11,52 @@ void log_state_step(const char* message);
 
 void handleFeedingState() {
     //! ************************************************************************
-    //! STEP 1: INITIAL SERVO SEQUENCE - MOVE TO 120 DEGREES
+    //! STEP 1: PARALLEL SERVO SEQUENCE AND FEEDING START DELAY
     //! ************************************************************************
     if (currentStep == 1.0f) {
-        log_state_step("State: FEEDING - Step 1: Initial servo sequence - moving to 120°...");
-        if (flipServo.hasReachedTarget()) {
+        log_state_step("State: FEEDING - Step 1: Starting servo sequence and feeding delay simultaneously...");
+        
+        // Start servo sequence on first call
+        if (millis() - stateStartTime < 100) { // Only on first call (within 100ms of state start)
+            Serial.println("                 - Moving servo to 120°...");
+            flipServo.write(SERVO_INITIAL_ANGLE);
+        }
+        
+        // Check if servo reached 120° and start wait
+        static unsigned long servoWaitStart = 0;
+        static bool servoWaitStarted = false;
+        if (!servoWaitStarted && flipServo.hasReachedTarget()) {
             Serial.println("                 - Servo reached 120°. Waiting 500ms...");
-            stepStartTime = millis();
-            currentStep = 1.5f;
+            servoWaitStart = millis();
+            servoWaitStarted = true;
         }
-    }
-    
-    //! ************************************************************************
-    //! STEP 1.5: WAIT 500MS AT 120 DEGREES
-    //! ************************************************************************
-    else if (currentStep == 1.5f) {
-        log_state_step("State: FEEDING - Step 1.5: Waiting 500ms at 120°...");
-        if (millis() - stepStartTime >= SERVO_INITIAL_WAIT) {
-            Serial.println("                 - Wait complete. Moving servo back to 104°...");
+        
+        // Check if servo wait is complete and move back to 104°
+        static bool servoMovedBack = false;
+        if (servoWaitStarted && !servoMovedBack && millis() - servoWaitStart >= SERVO_INITIAL_WAIT) {
+            Serial.println("                 - Servo wait complete. Moving back to 104°...");
             flipServo.write(SERVO_HOME_ANGLE);
-            stepStartTime = millis();
-            currentStep = 1.7f;
+            servoMovedBack = true;
         }
-    }
-    
-    //! ************************************************************************
-    //! STEP 1.7: WAIT FOR SERVO TO RETURN TO HOME POSITION
-    //! ************************************************************************
-    else if (currentStep == 1.7f) {
-        log_state_step("State: FEEDING - Step 1.7: Waiting for servo to return to 104°...");
-        if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo sequence complete. Starting feeding process...");
+        
+        // Check if both servo sequence and feeding delay are complete
+        bool feedingDelayComplete = (millis() - stateStartTime >= FEEDING_START_DELAY_1);
+        bool servoBackToHome = servoMovedBack && flipServo.hasReachedTarget();
+        
+        if (feedingDelayComplete && servoBackToHome) {
+            Serial.println("                 - Both servo sequence and feeding delay complete. Starting feed...");
+            // Retract cylinder to push wood
+            digitalWrite(FEED_CYLINDER_PIN, HIGH);
             stepStartTime = millis();
             currentStep = 2.0f;
         }
     }
     
     //! ************************************************************************
-    //! STEP 2: WAIT FOR START DELAY
+    //! STEP 2: WAIT FOR FEED TIME TO ELAPSE
     //! ************************************************************************
     else if (currentStep == 2.0f) {
-        log_state_step("State: FEEDING - Step 2: Waiting for start delay...");
-        if (millis() - stepStartTime >= FEEDING_START_DELAY_1) {
-            Serial.println("                 - Delay complete. Retracting cylinder to push wood.");
-            // Retract cylinder to push wood
-            digitalWrite(FEED_CYLINDER_PIN, HIGH);
-            stepStartTime = millis();
-            currentStep = 3.0f;
-        }
-    }
-    
-    //! ************************************************************************
-    //! STEP 3: WAIT FOR FEED TIME TO ELAPSE
-    //! ************************************************************************
-    else if (currentStep == 3.0f) {
-        log_state_step("State: FEEDING - Step 3: Waiting for feed time to elapse...");
+        log_state_step("State: FEEDING - Step 2: Waiting for feed time to elapse...");
         if (millis() - stepStartTime >= FEED_TIME) {
             Serial.println("                 - Feed time elapsed. Extending cylinder to safe position.");
             Serial.println("                 - Transitioning to FLIPPING state.");
