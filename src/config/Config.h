@@ -26,5 +26,5 @@ const float SERVO_TEST_END_ANGLE   = 100.0f;     // End angle for the power-on t
 // Purpose: Defines the servo movement sequence right after start signal.
 // ------------------------------------------------------------------------
 const float SERVO_START_DELAY      = 1000.0f; // Delay before servo starts moving to 120°.
-const float SERVO_INITIAL_ANGLE    = 112.0f;  // Angle to move to at start of sequence.
+const float SERVO_INITIAL_ANGLE    = 115.0f;  // Angle to move to at start of sequence.
 const float SERVO_INITIAL_WAIT     = 500.0f;  // Wait time in milliseconds between movements. 

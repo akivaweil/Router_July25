@@ -19,16 +19,16 @@ void handleFeedingState() {
         // Start servo sequence after 1 second delay
         static bool servoStarted = false;
         if (!servoStarted && millis() - stateStartTime >= SERVO_START_DELAY) {
-            Serial.println("                 - Servo delay complete. Moving servo to 120°...");
+            Serial.println("                 - Servo delay complete. Moving servo to 130°...");
             flipServo.write(SERVO_INITIAL_ANGLE);
             servoStarted = true;
         }
         
-        // Check if servo reached 120° and start wait
+        // Check if servo reached 130° and start wait
         static unsigned long servoWaitStart = 0;
         static bool servoWaitStarted = false;
         if (servoStarted && !servoWaitStarted && flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo reached 120°. Waiting 500ms...");
+            Serial.println("                 - Servo reached 130°. Waiting 500ms...");
             servoWaitStart = millis();
             servoWaitStarted = true;
         }
@@ -41,15 +41,18 @@ void handleFeedingState() {
             servoMovedBack = true;
         }
         
-        // Check if both servo sequence and feeding delay are complete
-        bool feedingDelayComplete = (millis() - stateStartTime >= FEEDING_START_DELAY_1);
-        bool servoBackToHome = servoMovedBack && flipServo.hasReachedTarget();
-        
-        if (feedingDelayComplete && servoBackToHome) {
-            Serial.println("                 - Both servo sequence and feeding delay complete. Starting feed...");
+        // Check if feeding delay is complete (independent of servo)
+        static bool cylinderRetracted = false;
+        if (!cylinderRetracted && millis() - stateStartTime >= FEEDING_START_DELAY_1) {
+            Serial.println("                 - Feeding delay complete. Retracting cylinder to push wood...");
             // Retract cylinder to push wood
             digitalWrite(FEED_CYLINDER_PIN, HIGH);
+            cylinderRetracted = true;
             stepStartTime = millis();
+        }
+        
+        // Move to next step when cylinder is retracted
+        if (cylinderRetracted) {
             currentStep = 2.0f;
         }
     }
