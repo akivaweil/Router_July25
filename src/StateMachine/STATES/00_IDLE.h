@@ -22,9 +22,13 @@ void handleIdleState() {
     log_state_step("State: IDLE - Waiting for start signal...");
 
     //! ************************************************************************
-    //! ENSURE SERVO IS IN HOME POSITION
+    //! ENSURE SERVO IS IN HOME POSITION (ONLY WHEN ENTERING IDLE STATE)
     //! ************************************************************************
-    flipServo.write(SERVO_HOME_ANGLE);
+    static bool servoHomed = false;
+    if (!servoHomed) {
+        flipServo.write(SERVO_HOME_ANGLE);
+        servoHomed = true;
+    }
 
     //! ************************************************************************
     //! CHECK FOR START SIGNAL
@@ -34,5 +38,6 @@ void handleIdleState() {
         currentState = S_FEEDING;  // Go to FEEDING state
         stateStartTime = millis();
         currentStep = 1.0f;
+        servoHomed = false;  // Reset flag for next time we return to IDLE
     }
 } 
