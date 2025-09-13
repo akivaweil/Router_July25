@@ -11,7 +11,7 @@ const float FEED_TIME             = 2500.0f; // Duration the feed cylinder is ac
 const float SERVO_MOVE_DELAY      = 1000.0f; // Time allotted for the servo to complete its movement
 
 //! ********************** SERVO ANGLES (degrees) ***************************
-const float SERVO_HOME_ANGLE       = 110.0f;  // The safe/home position for the servo
+extern float SERVO_HOME_ANGLE;  // The safe/home position for the servo (modifiable via dashboard)
 const float FLIP_ANGLE             = 0.0f;   // The target angle to flip the material
 const float SERVO_TEST_START_ANGLE = 150.0f; // Start angle for the power-on test sequence
 const float SERVO_TEST_END_ANGLE   = 100.0f; // End angle for the power-on test sequence  

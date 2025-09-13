@@ -17,6 +17,7 @@
 //* ********************** PROJECT FILES ***********************************
 //* ************************************************************************
 #include "ServoControl.h"
+#include "WebDashboard.h"
 #include "config/Pins_Definitions.h"
 #include "config/Config.h"
 
@@ -49,6 +50,9 @@ Bounce manualStartDebouncer = Bounce();
 
 //! ********************** SERVO CONTROL ***********************************
 ServoControl flipServo;
+
+//! ********************** WEB DASHBOARD ***********************************
+WebDashboard dashboard;
 
 //! ********************** STATE MACHINE VARIABLES *************************
 State currentState = S_IDLE;
@@ -120,6 +124,20 @@ void setup() {
     flipServo.write(SERVO_HOME_ANGLE);
 
     //! ************************************************************************
+    //! CONNECT TO WIFI
+    //! ************************************************************************
+    WiFi.begin("Everwood", "Everwood-Staff");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(1000);
+    }
+
+    //! ************************************************************************
+    //! INITIALIZE WEB DASHBOARD
+    //! ************************************************************************
+    dashboard.init(&SERVO_HOME_ANGLE);
+    dashboard.begin();
+
+    //! ************************************************************************
     //! INITIALIZE OTA FUNCTIONALITY
     //! ************************************************************************
     initOTA();
@@ -139,6 +157,11 @@ void loop() {
     //! HANDLE OVER-THE-AIR UPDATES
     //! ************************************************************************
     handleOTA();
+
+    //! ************************************************************************
+    //! UPDATE WEB DASHBOARD
+    //! ************************************************************************
+    dashboard.update();
 
     //! ************************************************************************
     //! RUN STATE MACHINE
