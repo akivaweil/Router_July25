@@ -1,60 +1,68 @@
-/*
- * ESP32 Router Control System
- *
- * This program controls a router machine that:
- * 1. Waits for a start signal (IDLE)
- * 2. Feeds wood through router (FEEDING)
- * 3. Flips the wood over with a servo motor (FLIPPING)
- * 4. Feeds wood again (FEEDING2)
- * 5. Goes back to waiting (IDLE)
- */
+//* ************************************************************************
+//* ******************** ESP32 ROUTER CONTROL SYSTEM *********************
+//* ************************************************************************
+//! This program controls a router machine that:
+//! 1. Waits for a start signal (IDLE)
+//! 2. Feeds wood through router (FEEDING)
+//! 3. Flips the wood over with a servo motor (FLIPPING)
+//! 4. Feeds wood again (FEEDING2)
+//! 5. Goes back to waiting (IDLE)
 
 #include <Arduino.h>
 #include <Bounce2.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
-#include "ServoControl.h" // Include the custom servo library
 
-// ************************************************************************
-// ********************** PROJECT FILES ***********************************
-// ************************************************************************
+//* ************************************************************************
+//* ********************** PROJECT FILES ***********************************
+//* ************************************************************************
+#include "ServoControl.h"
 #include "config/Pins_Definitions.h"
 #include "config/Config.h"
 
-// ************************************************************************
-// ********************** FORWARD DECLARATIONS ****************************
-// ************************************************************************
+//* ************************************************************************
+//* ********************** FORWARD DECLARATIONS ****************************
+//* ************************************************************************
 void initOTA();
 void handleOTA();
 void handleStateMachine();
+void log_state_step(const char* message);
 
-// ************************************************************************
-// ********************** GLOBAL VARIABLES ********************************
-// ************************************************************************
+//* ************************************************************************
+//* ********************** STATE ENUMERATION *******************************
+//* ************************************************************************
+enum State { 
+    S_NONE, 
+    S_IDLE, 
+    S_FEEDING, 
+    S_FLIPPING, 
+    S_FEEDING2 
+};
 
-// Create Bounce objects for debouncing
+//* ************************************************************************
+//* ********************** GLOBAL VARIABLES ********************************
+//* ************************************************************************
+
+//! ********************** INPUT DEBOUNCERS ********************************
 Bounce startSensorDebouncer = Bounce();
 Bounce manualStartDebouncer = Bounce();
 
-// Create servo object
+//! ********************** SERVO CONTROL ***********************************
 ServoControl flipServo;
 
-// Keep track of what the machine is doing
-enum State { S_NONE, S_IDLE, S_FEEDING, S_FLIPPING, S_FEEDING2 };
+//! ********************** STATE MACHINE VARIABLES *************************
 State currentState = S_IDLE;
-
-// To prevent log spam, keep track of the last logged state and step
 State lastLoggedState = S_NONE;
 float lastLoggedStep = 0.0f;
 
-// Variables to remember when things started
+//! ********************** TIMING VARIABLES ********************************
 unsigned long stateStartTime = 0;
 unsigned long stepStartTime = 0;
-float currentStep = 0.0f; // Using float as requested
+float currentStep = 1.0f;
 
-// ************************************************************************
-// ********************** HELPER FUNCTIONS ********************************
-// ************************************************************************
+//* ************************************************************************
+//* ********************** HELPER FUNCTIONS ********************************
+//* ************************************************************************
 void log_state_step(const char* message) {
     if (currentState != lastLoggedState || currentStep != lastLoggedStep) {
         Serial.println(message);
@@ -63,64 +71,84 @@ void log_state_step(const char* message) {
     }
 }
 
-// ************************************************************************
-// ********************** STATE MACHINE FILES *****************************
-// ************************************************************************
+//* ************************************************************************
+//* ********************** STATE MACHINE FILES *****************************
+//* ************************************************************************
 #include "StateMachine/STATES/00_IDLE.h"
 #include "StateMachine/STATES/01_FEEDING.h"
 #include "StateMachine/STATES/02_FLIPPING.h"
 #include "StateMachine/STATES/03_FEEDING2.h"
 
-// ************************************************************************
-// **************************** SETUP *************************************
-// ************************************************************************
+//* ************************************************************************
+//* **************************** SETUP *************************************
+//* ************************************************************************
 void setup() {
-    // --- START SERIAL ---
+    //! ************************************************************************
+    //! INITIALIZE SERIAL COMMUNICATION
+    //! ************************************************************************
     Serial.begin(115200);
     
-    // --- DISABLE BROWNOUT DETECTOR ---
+    //! ************************************************************************
+    //! DISABLE BROWNOUT DETECTOR
+    //! ************************************************************************
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-    // Set up the pins
+    //! ************************************************************************
+    //! CONFIGURE INPUT PINS
+    //! ************************************************************************
     pinMode(START_SENSOR_PIN, INPUT_PULLDOWN);
     pinMode(MANUAL_START_PIN, INPUT_PULLDOWN);
     pinMode(FEED_CYLINDER_PIN, OUTPUT);
 
-    // Setup the debouncers
+    //! ************************************************************************
+    //! SETUP INPUT DEBOUNCERS
+    //! ************************************************************************
     startSensorDebouncer.attach(START_SENSOR_PIN);
-    startSensorDebouncer.interval(5); // 30ms debounce
+    startSensorDebouncer.interval(5); // 5ms debounce
     manualStartDebouncer.attach(MANUAL_START_PIN);
     manualStartDebouncer.interval(30); // 30ms debounce
 
-    // Make sure cylinder starts in safe position (retracted)
-    digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe
+    //! ************************************************************************
+    //! INITIALIZE FEED CYLINDER TO SAFE POSITION
+    //! ************************************************************************
+    digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe position
 
-    // Configure servo motor and move to home position
+    //! ************************************************************************
+    //! CONFIGURE SERVO MOTOR
+    //! ************************************************************************
     flipServo.init(FLIP_SERVO_PIN, 0, 50, 14); // pin, channel, frequency, resolution
     flipServo.write(SERVO_HOME_ANGLE);
 
-    // Initialize OTA functionality
+    //! ************************************************************************
+    //! INITIALIZE OTA FUNCTIONALITY
+    //! ************************************************************************
     initOTA();
 }
 
-// ************************************************************************
-// ***************************** LOOP *************************************
-// ************************************************************************
+//* ************************************************************************
+//* ***************************** LOOP *************************************
+//* ************************************************************************
 void loop() {
-    // Update the debouncers
+    //! ************************************************************************
+    //! UPDATE INPUT DEBOUNCERS
+    //! ************************************************************************
     startSensorDebouncer.update();
     manualStartDebouncer.update();
 
-    // Handle Over-The-Air updates
+    //! ************************************************************************
+    //! HANDLE OVER-THE-AIR UPDATES
+    //! ************************************************************************
     handleOTA();
 
-    // Run the state machine
+    //! ************************************************************************
+    //! RUN STATE MACHINE
+    //! ************************************************************************
     handleStateMachine();
 }
 
-// ************************************************************************
-// ********************** STATE MACHINE HANDLER ***************************
-// ************************************************************************
+//* ************************************************************************
+//* ********************** STATE MACHINE HANDLER ***************************
+//* ************************************************************************
 void handleStateMachine() {
     switch (currentState) {
         case S_IDLE:
@@ -134,6 +162,11 @@ void handleStateMachine() {
             break;
         case S_FEEDING2:
             handleFeeding2State();
+            break;
+        default:
+            // Handle unexpected state
+            currentState = S_IDLE;
+            currentStep = 1.0f;
             break;
     }
 }

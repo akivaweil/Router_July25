@@ -3,41 +3,56 @@
 //* ************************************************************************
 //! Simple OTA (Over-The-Air) update manager for ESP32
 //! Handles WiFi connection and OTA updates
+//! Provides wireless firmware updates for the router control system
 
 #include <WiFi.h>
 #include <ArduinoOTA.h>
 #include <Arduino.h>
 
-// WiFi credentials
+//* ************************************************************************
+//* ************************ NETWORK CONFIGURATION *************************
+//* ************************************************************************
+
+//! ********************** WIFI CREDENTIALS ********************************
 const char* WIFI_SSID = "Everwood";
 const char* WIFI_PASSWORD = "Everwood-Staff";
 
-// OTA settings
+//! ********************** OTA SETTINGS ************************************
 const char* OTA_HOSTNAME = "Router-July25-ESP32";
 const char* OTA_PASSWORD = "";  // No password for simplicity
+
+//! ********************** CONNECTION PARAMETERS ***************************
+const int WIFI_CONNECT_TIMEOUT = 20;  // Maximum connection attempts (20 * 500ms = 10 seconds)
+const int WIFI_CONNECT_DELAY = 500;   // Delay between connection attempts (ms)
 
 //* ************************************************************************
 //* ************************ OTA INITIALIZATION ***************************
 //* ************************************************************************
-
 void initOTA() {
     Serial.println("=== STARTING OTA SETUP ===");
     
-    // Connect to WiFi
+    //! ************************************************************************
+    //! CONNECT TO WIFI NETWORK
+    //! ************************************************************************
     Serial.print("Connecting to WiFi: ");
     Serial.println(WIFI_SSID);
     
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
     
-    // Wait for WiFi connection (max 10 seconds)
+    //! ************************************************************************
+    //! WAIT FOR WIFI CONNECTION WITH TIMEOUT
+    //! ************************************************************************
     int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-        delay(500);
+    while (WiFi.status() != WL_CONNECTED && attempts < WIFI_CONNECT_TIMEOUT) {
+        delay(WIFI_CONNECT_DELAY);
         Serial.print(".");
         attempts++;
     }
     
+    //! ************************************************************************
+    //! CHECK CONNECTION STATUS
+    //! ************************************************************************
     if (WiFi.status() == WL_CONNECTED) {
         Serial.println();
         Serial.print("✓ WiFi connected! IP address: ");
@@ -48,13 +63,17 @@ void initOTA() {
         return;
     }
     
-    // Configure OTA
+    //! ************************************************************************
+    //! CONFIGURE OTA SETTINGS
+    //! ************************************************************************
     ArduinoOTA.setHostname(OTA_HOSTNAME);
     if (strlen(OTA_PASSWORD) > 0) {
         ArduinoOTA.setPassword(OTA_PASSWORD);
     }
     
-    // OTA event handlers
+    //! ************************************************************************
+    //! SETUP OTA EVENT HANDLERS
+    //! ************************************************************************
     ArduinoOTA.onStart([]() {
         String type;
         if (ArduinoOTA.getCommand() == U_FLASH) {
@@ -70,7 +89,7 @@ void initOTA() {
     });
     
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-        // Progress tracking disabled to reduce spam
+        // Progress tracking disabled to reduce spam during motor operations
     });
     
     ArduinoOTA.onError([](ota_error_t error) {
@@ -88,6 +107,9 @@ void initOTA() {
         }
     });
     
+    //! ************************************************************************
+    //! START OTA SERVICE
+    //! ************************************************************************
     ArduinoOTA.begin();
     Serial.println("✓ OTA ready!");
     Serial.print("OTA hostname: ");
@@ -98,7 +120,9 @@ void initOTA() {
 //* ************************************************************************
 //* ************************ OTA HANDLER **********************************
 //* ************************************************************************
-
 void handleOTA() {
+    //! ************************************************************************
+    //! HANDLE OTA UPDATE REQUESTS
+    //! ************************************************************************
     ArduinoOTA.handle();
 } 
