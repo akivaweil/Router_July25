@@ -1,4 +1,5 @@
 #include "WebDashboard.h"
+#include "ServoControl.h"
 
 //* ************************************************************************
 //* ********************** CONSTRUCTOR *************************************
@@ -11,16 +12,18 @@ WebDashboard::WebDashboard() {
     webSocket = nullptr;
     isConnected = false;
     homeAnglePtr = nullptr;
+    servoPtr = nullptr;
 }
 
 //* ************************************************************************
 //* ********************** INITIALIZATION **********************************
 //* ************************************************************************
-void WebDashboard::init(float* homeAngle) {
+void WebDashboard::init(float* homeAngle, void* servo) {
     //! ************************************************************************
-    //! STORE POINTER TO HOME ANGLE VARIABLE
+    //! STORE POINTER TO HOME ANGLE VARIABLE AND SERVO OBJECT
     //! ************************************************************************
     homeAnglePtr = homeAngle;
+    servoPtr = servo;
     
     //! ************************************************************************
     //! INITIALIZE EEPROM
@@ -497,6 +500,15 @@ void WebDashboard::setHomeAngle(float angle) {
     if (homeAnglePtr != nullptr && angle >= 0.0f && angle <= 180.0f) {
         *homeAnglePtr = angle;
         saveHomeAngleToEEPROM();
+        
+        //! ************************************************************************
+        //! IMMEDIATELY MOVE SERVO TO NEW ANGLE
+        //! ************************************************************************
+        if (servoPtr != nullptr) {
+            ServoControl* servo = static_cast<ServoControl*>(servoPtr);
+            servo->write(angle);
+        }
+        
         sendStatusUpdate();
     }
 }

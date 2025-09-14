@@ -21,6 +21,7 @@ private:
     WebSocketsServer* webSocket;
     bool isConnected;
     float* homeAnglePtr;  // Pointer to the home angle variable
+    void* servoPtr;       // Pointer to the servo object
     
     //! ********************** EEPROM SETTINGS ******************************
     static const int EEPROM_SIZE = 512;
@@ -38,7 +39,7 @@ public:
     WebDashboard();
     
     //! ********************** INITIALIZATION *******************************
-    void init(float* homeAngle);
+    void init(float* homeAngle, void* servo);
     void begin();
     
     //! ********************** CONTROL METHODS ******************************
