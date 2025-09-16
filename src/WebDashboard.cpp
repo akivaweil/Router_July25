@@ -1259,43 +1259,43 @@ void WebDashboard::update(bool isIdleState) {
     //! ************************************************************************
     //! ONLY PROCESS WEBSOCKET EVENTS WHEN MACHINE IS IN IDLE STATE
     //! ************************************************************************
+    static bool wasInActiveCycle = false;
+    static unsigned long lastStatusUpdate = 0;
+    
     if (webSocket != nullptr && isIdleState) {
         webSocket->loop();
         
         //! ************************************************************************
         //! HANDLE DEFERRED OPERATIONS WHEN IDLE
         //! ************************************************************************
-        static unsigned long lastEEPROMSave = 0;
-        static unsigned long lastStatusUpdate = 0;
-        static int cycleCounter = 0;
-        
         unsigned long currentTime = millis();
         
         //! ************************************************************************
-        //! SAVE CRITICAL DATA PERIODICALLY (EVERY 5 SECONDS WHEN IDLE)
+        //! DETECT CYCLE COMPLETION (TRANSITION FROM ACTIVE CYCLE TO IDLE)
         //! ************************************************************************
-        if (currentTime - lastEEPROMSave > 5000) {
+        if (wasInActiveCycle) {
+            // Machine just completed a cycle and returned to idle - save EEPROM data
             EEPROM.put(TOTAL_CYCLES_ADDR, totalCycles);
-            EEPROM.commit();
-            lastEEPROMSave = currentTime;
-        }
-        
-        //! ************************************************************************
-        //! SAVE TRIGGER BUFFER PERIODICALLY (EVERY 10 CYCLES)
-        //! ************************************************************************
-        cycleCounter++;
-        if (cycleCounter >= 10) {
             saveTriggerDataToEEPROM();
-            cycleCounter = 0;
+            EEPROM.commit();
+            
+            // Update display immediately after cycle completion
+            if (isConnected) {
+                sendStatusUpdate();
+                lastStatusUpdate = currentTime;
+            }
+        } else {
+            // Machine was already idle, just update display periodically
+            if (isConnected && currentTime - lastStatusUpdate > 2000) {
+                sendStatusUpdate();
+                lastStatusUpdate = currentTime;
+            }
         }
         
-        //! ************************************************************************
-        //! UPDATE DISPLAY PERIODICALLY (EVERY 2 SECONDS WHEN IDLE)
-        //! ************************************************************************
-        if (isConnected && currentTime - lastStatusUpdate > 2000) {
-            sendStatusUpdate();
-            lastStatusUpdate = currentTime;
-        }
+        wasInActiveCycle = false; // Reset flag for next cycle
+    } else {
+        // Machine is in active cycle
+        wasInActiveCycle = true;
     }
 }
 
