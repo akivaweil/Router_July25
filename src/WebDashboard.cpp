@@ -17,10 +17,10 @@ WebDashboard::WebDashboard() {
     //! ************************************************************************
     //! INITIALIZE TRIGGER TRACKING VARIABLES
     //! ************************************************************************
-    triggerBufferIndex = 0;
-    lastTriggerTime = 0;
+    cycleBufferIndex = 0;
+    lastCycleTime = 0;
     totalCycles = 0;
-    triggerDataLoaded = false;
+    cycleDataLoaded = false;
     
     //! ************************************************************************
     //! INITIALIZE HOURLY TRACKING VARIABLES
@@ -73,7 +73,7 @@ void WebDashboard::init(float* homeAngle, void* servo) {
     //! ************************************************************************
     //! LOAD TRIGGER DATA FROM EEPROM
     //! ************************************************************************
-    loadTriggerDataFromEEPROM();
+    loadCycleDataFromEEPROM();
     
     //! ************************************************************************
     //! LOAD HOURLY DATA FROM EEPROM
@@ -171,9 +171,9 @@ void WebDashboard::sendStatusUpdate() {
         json += "\"type\":\"status\",";
         json += "\"homeAngle\":" + String(*homeAnglePtr, 1) + ",";
         json += "\"totalCycles\":" + String(totalCycles) + ",";
-        json += "\"average3Min\":" + String(calculateAverageTriggers3Min(), 1) + ",";
-        json += "\"average15Min\":" + String(calculateAverageTriggers(), 1) + ",";
-        json += "\"average1Hour\":" + String(calculateAverageTriggers1Hour(), 1);
+        json += "\"average3Min\":" + String(calculateAverageCycles3Min(), 1) + ",";
+        json += "\"average15Min\":" + String(calculateAverageCycles(), 1) + ",";
+        json += "\"average1Hour\":" + String(calculateAverageCycles1Hour(), 1);
         json += "}";
         webSocket->broadcastTXT(json);
     }
@@ -1003,7 +1003,7 @@ String WebDashboard::getDashboardHTML() {
             // Title
             ctx.textAlign = 'center';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText('Triggers per Minute (15 min avg)', canvas.width / 2, 20);
+            ctx.fillText('Cycles per Minute (15 min avg)', canvas.width / 2, 20);
         }
         
         //! ************************************************************************
@@ -1288,7 +1288,7 @@ void WebDashboard::update(bool isIdleState) {
         if (wasInActiveCycle) {
             // Machine just completed a cycle and returned to idle - save EEPROM data
             EEPROM.put(TOTAL_CYCLES_ADDR, totalCycles);
-            saveTriggerDataToEEPROM();
+            saveCycleDataToEEPROM();
             EEPROM.commit();
             
             // Update display immediately after cycle completion
@@ -1326,16 +1326,16 @@ void WebDashboard::broadcastStatus() {
 //* ********************** TRIGGER TRACKING METHODS ************************
 //* ************************************************************************
 
-void WebDashboard::recordTrigger() {
+void WebDashboard::recordCycle() {
     //! ************************************************************************
     //! INCREMENT TOTAL CYCLE COUNT (MINIMAL OPERATION)
     //! ************************************************************************
     totalCycles++;
     
     //! ************************************************************************
-    //! ADD NEW TRIGGER RECORD (MINIMAL OPERATION)
+    //! ADD NEW CYCLE RECORD (MINIMAL OPERATION)
     //! ************************************************************************
-    addTriggerRecord();
+    addCycleRecord();
     
     //! ************************************************************************
     //! UPDATE HOURLY DATA (MINIMAL OPERATION)
@@ -1348,20 +1348,20 @@ void WebDashboard::recordTrigger() {
     // EEPROM operations and status updates will be handled in update() when idle
 }
 
-void WebDashboard::addTriggerRecord() {
+void WebDashboard::addCycleRecord() {
     //! ************************************************************************
-    //! ADD CURRENT TRIGGER TO BUFFER
+    //! ADD CURRENT CYCLE TO BUFFER
     //! ************************************************************************
-    triggerBuffer[triggerBufferIndex].timestamp = millis();
-    triggerBuffer[triggerBufferIndex].cycle_count = totalCycles;
+    cycleBuffer[cycleBufferIndex].timestamp = millis();
+    cycleBuffer[cycleBufferIndex].cycle_count = totalCycles;
     
     //! ************************************************************************
     //! ADVANCE BUFFER INDEX (CIRCULAR)
     //! ************************************************************************
-    triggerBufferIndex = (triggerBufferIndex + 1) % MAX_TRIGGER_RECORDS;
+    cycleBufferIndex = (cycleBufferIndex + 1) % MAX_CYCLE_RECORDS;
 }
 
-float WebDashboard::calculateAverageTriggers() {
+float WebDashboard::calculateAverageCycles() {
     //! ************************************************************************
     //! CALCULATE AVERAGE TRIGGERS OVER PAST 15 MINUTES
     //! ************************************************************************
@@ -1370,8 +1370,8 @@ float WebDashboard::calculateAverageTriggers() {
     
     int validRecords = 0;
     
-    for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
-        if (triggerBuffer[i].timestamp > fifteenMinutesAgo && triggerBuffer[i].timestamp > 0) {
+    for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
+        if (cycleBuffer[i].timestamp > fifteenMinutesAgo && cycleBuffer[i].timestamp > 0) {
             validRecords++;
         }
     }
@@ -1387,7 +1387,7 @@ float WebDashboard::calculateAverageTriggers() {
     return averagePerMinute;
 }
 
-float WebDashboard::calculateAverageTriggers3Min() {
+float WebDashboard::calculateAverageCycles3Min() {
     //! ************************************************************************
     //! CALCULATE AVERAGE TRIGGERS OVER PAST 3 MINUTES
     //! ************************************************************************
@@ -1396,13 +1396,13 @@ float WebDashboard::calculateAverageTriggers3Min() {
     
     int validRecords = 0;
     
-    for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
+    for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
         //! ************************************************************************
         //! CHECK IF RECORD IS WITHIN 3 MINUTE WINDOW AND NOT EMPTY
         //! ************************************************************************
-        if (triggerBuffer[i].timestamp > threeMinutesAgo && 
-            triggerBuffer[i].timestamp > 0 && 
-            triggerBuffer[i].timestamp <= currentTime) {
+        if (cycleBuffer[i].timestamp > threeMinutesAgo && 
+            cycleBuffer[i].timestamp > 0 && 
+            cycleBuffer[i].timestamp <= currentTime) {
             validRecords++;
         }
     }
@@ -1428,7 +1428,7 @@ float WebDashboard::calculateAverageTriggers3Min() {
     return averagePerMinute;
 }
 
-float WebDashboard::calculateAverageTriggers1Hour() {
+float WebDashboard::calculateAverageCycles1Hour() {
     //! ************************************************************************
     //! CALCULATE AVERAGE TRIGGERS OVER PAST 1 HOUR
     //! ************************************************************************
@@ -1437,8 +1437,8 @@ float WebDashboard::calculateAverageTriggers1Hour() {
     
     int validRecords = 0;
     
-    for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
-        if (triggerBuffer[i].timestamp > oneHourAgo && triggerBuffer[i].timestamp > 0) {
+    for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
+        if (cycleBuffer[i].timestamp > oneHourAgo && cycleBuffer[i].timestamp > 0) {
             validRecords++;
         }
     }
@@ -1454,38 +1454,38 @@ float WebDashboard::calculateAverageTriggers1Hour() {
     return averagePerMinute;
 }
 
-void WebDashboard::saveTriggerDataToEEPROM() {
+void WebDashboard::saveCycleDataToEEPROM() {
     //! ************************************************************************
-    //! SAVE TRIGGER BUFFER TO EEPROM
+    //! SAVE CYCLE BUFFER TO EEPROM
     //! ************************************************************************
-    EEPROM.put(TRIGGER_DATA_ADDR, triggerBuffer);
-    EEPROM.put(TRIGGER_DATA_ADDR + TRIGGER_BUFFER_SIZE, triggerBufferIndex);
+    EEPROM.put(TRIGGER_DATA_ADDR, cycleBuffer);
+    EEPROM.put(TRIGGER_DATA_ADDR + CYCLE_BUFFER_SIZE, cycleBufferIndex);
     EEPROM.commit();
 }
 
-void WebDashboard::loadTriggerDataFromEEPROM() {
+void WebDashboard::loadCycleDataFromEEPROM() {
     //! ************************************************************************
     //! LOAD CRITICAL DATA (TOTAL CYCLES) FROM EEPROM
     //! ************************************************************************
     EEPROM.get(TOTAL_CYCLES_ADDR, totalCycles);
     
     //! ************************************************************************
-    //! LOAD TRIGGER BUFFER FROM EEPROM
+    //! LOAD CYCLE BUFFER FROM EEPROM
     //! ************************************************************************
-    EEPROM.get(TRIGGER_DATA_ADDR, triggerBuffer);
-    EEPROM.get(TRIGGER_DATA_ADDR + TRIGGER_BUFFER_SIZE, triggerBufferIndex);
+    EEPROM.get(TRIGGER_DATA_ADDR, cycleBuffer);
+    EEPROM.get(TRIGGER_DATA_ADDR + CYCLE_BUFFER_SIZE, cycleBufferIndex);
     
     //! ************************************************************************
     //! VALIDATE LOADED DATA
     //! ************************************************************************
-    if (triggerBufferIndex >= MAX_TRIGGER_RECORDS) {
-        triggerBufferIndex = 0;
+    if (cycleBufferIndex >= MAX_CYCLE_RECORDS) {
+        cycleBufferIndex = 0;
     }
     
-    triggerDataLoaded = true;
+    cycleDataLoaded = true;
 }
 
-void WebDashboard::updateTriggerDisplay() {
+void WebDashboard::updateCycleDisplay() {
     //! ************************************************************************
     //! SEND UPDATED TRIGGER DATA TO WEBSOCKET CLIENTS
     //! ************************************************************************

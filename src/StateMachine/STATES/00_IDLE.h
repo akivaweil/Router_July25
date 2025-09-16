@@ -37,11 +37,6 @@ void handleIdleState() {
     if (startSensorDebouncer.read() || manualStartDebouncer.read()) {
         Serial.println("Start signal received! Transitioning to FEEDING state.");
         
-        //! ************************************************************************
-        //! RECORD TRIGGER FOR STATISTICS
-        //! ************************************************************************
-        dashboard.recordTrigger();
-        
         currentState = S_FEEDING;  // Go to FEEDING state
         stateStartTime = millis();
         currentStep = 1.0f;

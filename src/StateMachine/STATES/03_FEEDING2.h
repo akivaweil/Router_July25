@@ -10,6 +10,7 @@
 extern State currentState;
 extern unsigned long stepStartTime;
 extern float currentStep;
+extern WebDashboard dashboard;
 void log_state_step(const char* message);
 
 //* ************************************************************************
@@ -37,6 +38,12 @@ void handleFeeding2State() {
             Serial.println("                 - Machine cycle complete. Returning to IDLE state.");
             // Extend cylinder to safe position (LOW = extended/safe)
             digitalWrite(FEED_CYLINDER_PIN, LOW);
+            
+            //! ************************************************************************
+            //! RECORD COMPLETE CYCLE FOR STATISTICS
+            //! ************************************************************************
+            dashboard.recordCycle();
+            
             currentState = S_IDLE;  // Go back to IDLE state
             currentStep = 1.0f;
         }
