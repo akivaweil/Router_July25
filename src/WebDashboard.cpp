@@ -1385,7 +1385,12 @@ float WebDashboard::calculateAverageTriggers3Min() {
     int validRecords = 0;
     
     for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
-        if (triggerBuffer[i].timestamp > threeMinutesAgo && triggerBuffer[i].timestamp > 0) {
+        //! ************************************************************************
+        //! CHECK IF RECORD IS WITHIN 3 MINUTE WINDOW AND NOT EMPTY
+        //! ************************************************************************
+        if (triggerBuffer[i].timestamp > threeMinutesAgo && 
+            triggerBuffer[i].timestamp > 0 && 
+            triggerBuffer[i].timestamp <= currentTime) {
             validRecords++;
         }
     }
@@ -1395,9 +1400,19 @@ float WebDashboard::calculateAverageTriggers3Min() {
     }
     
     //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE (MORE PRECISE CALCULATION)
+    //! CONVERT TO TRIGGERS PER MINUTE (CORRECT CALCULATION)
     //! ************************************************************************
     float averagePerMinute = (float)validRecords / 3.0f;
+    
+    //! ************************************************************************
+    //! DEBUG: TEMPORARY SERIAL OUTPUT TO UNDERSTAND THE CALCULATION
+    //! ************************************************************************
+    Serial.print("3min calc: ");
+    Serial.print(validRecords);
+    Serial.print(" records in 3min = ");
+    Serial.print(averagePerMinute);
+    Serial.println(" per minute");
+    
     return averagePerMinute;
 }
 
