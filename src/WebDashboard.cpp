@@ -171,9 +171,9 @@ void WebDashboard::sendStatusUpdate() {
         json += "\"type\":\"status\",";
         json += "\"homeAngle\":" + String(*homeAnglePtr, 1) + ",";
         json += "\"totalCycles\":" + String(totalCycles) + ",";
-        json += "\"average3Min\":" + String(calculateAverageTriggers3Min(), 2) + ",";
-        json += "\"average15Min\":" + String(calculateAverageTriggers(), 2) + ",";
-        json += "\"average1Hour\":" + String(calculateAverageTriggers1Hour(), 2);
+        json += "\"average3Min\":" + String(calculateAverageTriggers3Min(), 1) + ",";
+        json += "\"average15Min\":" + String(calculateAverageTriggers(), 1) + ",";
+        json += "\"average1Hour\":" + String(calculateAverageTriggers1Hour(), 1);
         json += "}";
         webSocket->broadcastTXT(json);
     }
@@ -881,9 +881,9 @@ String WebDashboard::getDashboardHTML() {
         //! ************************************************************************
         function updateStatistics() {
             document.getElementById('totalCycles').textContent = totalCycles;
-            document.getElementById('average3Min').textContent = average3Min.toFixed(2);
-            document.getElementById('average15Min').textContent = average15Min.toFixed(2);
-            document.getElementById('average1Hour').textContent = average1Hour.toFixed(2);
+            document.getElementById('average3Min').textContent = average3Min.toFixed(1);
+            document.getElementById('average15Min').textContent = average15Min.toFixed(1);
+            document.getElementById('average1Hour').textContent = average1Hour.toFixed(1);
         }
         
         //! ************************************************************************
@@ -1286,7 +1286,7 @@ void WebDashboard::update(bool isIdleState) {
             }
         } else {
             // Machine was already idle, just update display periodically
-            if (isConnected && currentTime - lastStatusUpdate > 2000) {
+            if (isConnected && currentTime - lastStatusUpdate > 5000) {
                 sendStatusUpdate();
                 lastStatusUpdate = currentTime;
             }
@@ -1357,12 +1357,10 @@ float WebDashboard::calculateAverageTriggers() {
     unsigned long fifteenMinutesAgo = currentTime - (15 * 60 * 1000);
     
     int validRecords = 0;
-    int totalTriggers = 0;
     
     for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
         if (triggerBuffer[i].timestamp > fifteenMinutesAgo && triggerBuffer[i].timestamp > 0) {
             validRecords++;
-            totalTriggers++;
         }
     }
     
@@ -1371,9 +1369,9 @@ float WebDashboard::calculateAverageTriggers() {
     }
     
     //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE
+    //! CONVERT TO TRIGGERS PER MINUTE (MORE PRECISE CALCULATION)
     //! ************************************************************************
-    float averagePerMinute = (float)totalTriggers / 15.0f;
+    float averagePerMinute = (float)validRecords / 15.0f;
     return averagePerMinute;
 }
 
@@ -1385,12 +1383,10 @@ float WebDashboard::calculateAverageTriggers3Min() {
     unsigned long threeMinutesAgo = currentTime - (3 * 60 * 1000);
     
     int validRecords = 0;
-    int totalTriggers = 0;
     
     for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
         if (triggerBuffer[i].timestamp > threeMinutesAgo && triggerBuffer[i].timestamp > 0) {
             validRecords++;
-            totalTriggers++;
         }
     }
     
@@ -1399,9 +1395,9 @@ float WebDashboard::calculateAverageTriggers3Min() {
     }
     
     //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE
+    //! CONVERT TO TRIGGERS PER MINUTE (MORE PRECISE CALCULATION)
     //! ************************************************************************
-    float averagePerMinute = (float)totalTriggers / 3.0f;
+    float averagePerMinute = (float)validRecords / 3.0f;
     return averagePerMinute;
 }
 
@@ -1413,12 +1409,10 @@ float WebDashboard::calculateAverageTriggers1Hour() {
     unsigned long oneHourAgo = currentTime - (60 * 60 * 1000);
     
     int validRecords = 0;
-    int totalTriggers = 0;
     
     for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
         if (triggerBuffer[i].timestamp > oneHourAgo && triggerBuffer[i].timestamp > 0) {
             validRecords++;
-            totalTriggers++;
         }
     }
     
@@ -1427,9 +1421,9 @@ float WebDashboard::calculateAverageTriggers1Hour() {
     }
     
     //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE
+    //! CONVERT TO TRIGGERS PER MINUTE (MORE PRECISE CALCULATION)
     //! ************************************************************************
-    float averagePerMinute = (float)totalTriggers / 60.0f;
+    float averagePerMinute = (float)validRecords / 60.0f;
     return averagePerMinute;
 }
 
