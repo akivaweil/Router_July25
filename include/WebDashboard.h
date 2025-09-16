@@ -24,14 +24,62 @@ private:
     void* servoPtr;       // Pointer to the servo object
     
     //! ********************** EEPROM SETTINGS ******************************
-    static const int EEPROM_SIZE = 512;
+    static const int EEPROM_SIZE = 1024;
     static const int HOME_ANGLE_ADDR = 0;
+    static const int TOTAL_CYCLES_ADDR = 16;  // Critical data - saved every cycle
+    static const int TRIGGER_DATA_ADDR = 32;  // Buffer data - saved every 10 cycles
+    
+    //! ********************** TRIGGER TRACKING ******************************
+    struct TriggerData {
+        unsigned long timestamp;
+        uint16_t cycle_count;
+    };
+    
+    struct HourlyData {
+        uint16_t cycles;
+        uint16_t hour;  // 0-23
+        uint16_t day;   // 1-31
+        uint16_t month; // 1-12
+    };
+    
+    static const int MAX_TRIGGER_RECORDS = 60; // 15 minutes * 4 records per minute
+    static const int TRIGGER_RECORD_SIZE = sizeof(TriggerData);
+    static const int TRIGGER_BUFFER_SIZE = MAX_TRIGGER_RECORDS * TRIGGER_RECORD_SIZE;
+    
+    //! ********************** HOURLY TRACKING *******************************
+    static const int MAX_HOURLY_RECORDS = 744; // 31 days * 24 hours
+    static const int HOURLY_RECORD_SIZE = sizeof(HourlyData);
+    static const int HOURLY_DATA_ADDR = 200; // Start after trigger buffer
+    
+    TriggerData triggerBuffer[MAX_TRIGGER_RECORDS];
+    int triggerBufferIndex;
+    unsigned long lastTriggerTime;
+    uint16_t totalCycles;
+    bool triggerDataLoaded;
+    
+    //! ********************** HOURLY DATA ************************************
+    HourlyData hourlyBuffer[MAX_HOURLY_RECORDS];
+    int hourlyBufferIndex;
+    uint16_t currentHourCycles;
+    uint8_t lastHour;
+    uint8_t lastDay;
+    uint8_t lastMonth;
     
     //! ********************** PRIVATE METHODS ******************************
     void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length);
     void sendStatusUpdate();
     void saveHomeAngleToEEPROM();
     void loadHomeAngleFromEEPROM();
+    void saveTriggerDataToEEPROM();
+    void loadTriggerDataFromEEPROM();
+    void addTriggerRecord();
+    float calculateAverageTriggers();
+    float calculateAverageTriggers3Min();
+    float calculateAverageTriggers1Hour();
+    void updateHourlyData();
+    void saveHourlyDataToEEPROM();
+    void loadHourlyDataFromEEPROM();
+    String getDailyStatsJSON(uint8_t day, uint8_t month);
     String getDashboardHTML();
     
 public:
@@ -45,10 +93,15 @@ public:
     //! ********************** CONTROL METHODS ******************************
     void setHomeAngle(float angle);
     void update();
+    void update(bool isIdleState);
     
     //! ********************** STATUS METHODS *******************************
     bool isClientConnected();
     void broadcastStatus();
+    
+    //! ********************** TRIGGER TRACKING METHODS *********************
+    void recordTrigger();
+    void updateTriggerDisplay();
 };
 
 #endif // WEB_DASHBOARD_H

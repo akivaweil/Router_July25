@@ -130,6 +130,14 @@ void setup() {
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
     }
+    
+    //! ************************************************************************
+    //! CONFIGURE TIME (NTP)
+    //! ************************************************************************
+    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    while (time(nullptr) < 1000000000) {
+        delay(1000);
+    }
 
     //! ************************************************************************
     //! INITIALIZE WEB DASHBOARD
@@ -159,9 +167,9 @@ void loop() {
     handleOTA();
 
     //! ************************************************************************
-    //! UPDATE WEB DASHBOARD
+    //! UPDATE WEB DASHBOARD (ONLY WHEN IN IDLE STATE)
     //! ************************************************************************
-    dashboard.update();
+    dashboard.update(currentState == S_IDLE);
 
     //! ************************************************************************
     //! RUN STATE MACHINE
