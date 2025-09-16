@@ -34,9 +34,9 @@ WebDashboard::WebDashboard() {
     //! ************************************************************************
     //! CLEAR TRIGGER BUFFER
     //! ************************************************************************
-    for (int i = 0; i < MAX_TRIGGER_RECORDS; i++) {
-        triggerBuffer[i].timestamp = 0;
-        triggerBuffer[i].cycle_count = 0;
+    for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
+        cycleBuffer[i].timestamp = 0;
+        cycleBuffer[i].cycle_count = 0;
     }
     
     //! ************************************************************************
