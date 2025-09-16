@@ -997,20 +997,8 @@ String WebDashboard::getDashboardHTML() {
             
             
             //! ************************************************************************
-            //! DRAW LABELS
+            //! DRAW TITLE
             //! ************************************************************************
-            ctx.fillStyle = '#666';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'center';
-            
-            // Y-axis labels
-            for (let i = 0; i <= 4; i++) {
-                const value = minValue + (i * valueRange / 4);
-                const y = canvas.height - padding - (i * graphHeight / 4);
-                ctx.fillText(value.toFixed(1), padding - 10, y + 4);
-            }
-            
-            // Title
             ctx.textAlign = 'center';
             ctx.font = 'bold 14px Arial';
             ctx.fillText('Cycles per Minute (15 min avg)', canvas.width / 2, 20);
