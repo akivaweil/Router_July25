@@ -902,10 +902,11 @@ String WebDashboard::getDashboardHTML() {
             });
             
             //! ************************************************************************
-            //! KEEP ONLY LAST 15 MINUTES OF DATA
+            //! KEEP EXACTLY 15 DATA POINTS (ONE PER MINUTE)
             //! ************************************************************************
-            const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
-            graphData = graphData.filter(point => point.time > fifteenMinutesAgo);
+            if (graphData.length > 15) {
+                graphData = graphData.slice(-15);
+            }
             
             //! ************************************************************************
             //! CLEAR CANVAS
@@ -915,27 +916,26 @@ String WebDashboard::getDashboardHTML() {
             if (graphData.length < 2) return;
             
             //! ************************************************************************
-            //! DRAW GRAPH
+            //! DRAW GRAPH WITH FIXED Y-AXIS (0-10)
             //! ************************************************************************
             const padding = 40;
             const graphWidth = canvas.width - 2 * padding;
             const graphHeight = canvas.height - 2 * padding;
             
             //! ************************************************************************
-            //! FIND MIN/MAX VALUES
+            //! FIXED Y-AXIS RANGE: 0-10
             //! ************************************************************************
-            const values = graphData.map(d => d.value);
-            const minValue = Math.min(...values);
-            const maxValue = Math.max(...values);
-            const valueRange = maxValue - minValue || 1;
+            const minValue = 0;
+            const maxValue = 10;
+            const valueRange = maxValue - minValue;
             
             //! ************************************************************************
-            //! DRAW GRID LINES
+            //! DRAW GRID LINES (0-10 RANGE)
             //! ************************************************************************
             ctx.strokeStyle = '#e0e0e0';
             ctx.lineWidth = 1;
-            for (let i = 0; i <= 4; i++) {
-                const y = padding + (i * graphHeight / 4);
+            for (let i = 0; i <= 10; i++) {
+                const y = padding + (i * graphHeight / 10);
                 ctx.beginPath();
                 ctx.moveTo(padding, y);
                 ctx.lineTo(canvas.width - padding, y);
@@ -943,14 +943,27 @@ String WebDashboard::getDashboardHTML() {
             }
             
             //! ************************************************************************
-            //! DRAW GRAPH LINE
+            //! DRAW Y-AXIS LABELS (0-10 RANGE)
+            //! ************************************************************************
+            ctx.fillStyle = '#666';
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'right';
+            for (let i = 0; i <= 10; i++) {
+                const value = 10 - i;
+                const y = padding + (i * graphHeight / 10) + 4;
+                ctx.fillText(value.toString(), padding - 5, y);
+            }
+            
+            //! ************************************************************************
+            //! DRAW GRAPH LINE AND DOTS (15 POINTS, 0-10 RANGE)
             //! ************************************************************************
             ctx.strokeStyle = '#667eea';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.beginPath();
             
+            // Draw line connecting the points
             for (let i = 0; i < graphData.length; i++) {
-                const x = padding + (i * graphWidth / (graphData.length - 1));
+                const x = padding + (i * graphWidth / 14); // 14 intervals for 15 points
                 const y = canvas.height - padding - ((graphData[i].value - minValue) / valueRange * graphHeight);
                 
                 if (i === 0) {
@@ -961,18 +974,17 @@ String WebDashboard::getDashboardHTML() {
             }
             ctx.stroke();
             
-            //! ************************************************************************
-            //! DRAW DATA POINTS
-            //! ************************************************************************
+            // Draw dots for each data point
             ctx.fillStyle = '#667eea';
             for (let i = 0; i < graphData.length; i++) {
-                const x = padding + (i * graphWidth / (graphData.length - 1));
+                const x = padding + (i * graphWidth / 14); // 14 intervals for 15 points
                 const y = canvas.height - padding - ((graphData[i].value - minValue) / valueRange * graphHeight);
                 
                 ctx.beginPath();
                 ctx.arc(x, y, 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
+            
             
             //! ************************************************************************
             //! DRAW LABELS
