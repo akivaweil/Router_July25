@@ -35,6 +35,12 @@ private:
         uint16_t cycle_count;
     };
     
+    struct CycleAverages {
+        float average3Min;
+        float average15Min;
+        float average1Hour;
+    };
+    
     struct HourlyData {
         uint16_t cycles;
         uint16_t hour;  // 0-23
@@ -73,9 +79,7 @@ private:
     void saveCycleDataToEEPROM();
     void loadCycleDataFromEEPROM();
     void addCycleRecord();
-    float calculateAverageCycles();
-    float calculateAverageCycles3Min();
-    float calculateAverageCycles1Hour();
+    CycleAverages calculateAllAverages();
     void updateHourlyData();
     void saveHourlyDataToEEPROM();
     void loadHourlyDataFromEEPROM();

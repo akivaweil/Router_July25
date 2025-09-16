@@ -167,13 +167,18 @@ void WebDashboard::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
 
 void WebDashboard::sendStatusUpdate() {
     if (isConnected && homeAnglePtr != nullptr) {
+        //! ************************************************************************
+        //! CALCULATE ALL AVERAGES IN ONE EFFICIENT PASS
+        //! ************************************************************************
+        CycleAverages averages = calculateAllAverages();
+        
         String json = "{";
         json += "\"type\":\"status\",";
         json += "\"homeAngle\":" + String(*homeAnglePtr, 1) + ",";
         json += "\"totalCycles\":" + String(totalCycles) + ",";
-        json += "\"average3Min\":" + String(calculateAverageCycles3Min(), 1) + ",";
-        json += "\"average15Min\":" + String(calculateAverageCycles(), 1) + ",";
-        json += "\"average1Hour\":" + String(calculateAverageCycles1Hour(), 1);
+        json += "\"average3Min\":" + String(averages.average3Min, 1) + ",";
+        json += "\"average15Min\":" + String(averages.average15Min, 1) + ",";
+        json += "\"average1Hour\":" + String(averages.average1Hour, 1);
         json += "}";
         webSocket->broadcastTXT(json);
     }
@@ -1359,87 +1364,66 @@ void WebDashboard::addCycleRecord() {
     cycleBufferIndex = (cycleBufferIndex + 1) % MAX_CYCLE_RECORDS;
 }
 
-float WebDashboard::calculateAverageCycles() {
+WebDashboard::CycleAverages WebDashboard::calculateAllAverages() {
     //! ************************************************************************
-    //! CALCULATE AVERAGE TRIGGERS OVER PAST 15 MINUTES
+    //! CALCULATE ALL TIME PERIOD AVERAGES IN ONE PASS
     //! ************************************************************************
-    unsigned long currentTime = millis();
-    unsigned long fifteenMinutesAgo = currentTime - (15 * 60 * 1000);
+    CycleAverages averages = {0.0f, 0.0f, 0.0f};
     
-    int validRecords = 0;
-    
-    for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
-        if (cycleBuffer[i].timestamp > fifteenMinutesAgo && cycleBuffer[i].timestamp > 0) {
-            validRecords++;
-        }
-    }
-    
-    if (validRecords == 0) {
-        return 0.0f;
-    }
-    
-    //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE (MORE PRECISE CALCULATION)
-    //! ************************************************************************
-    float averagePerMinute = (float)validRecords / 15.0f;
-    return averagePerMinute;
-}
-
-float WebDashboard::calculateAverageCycles3Min() {
-    //! ************************************************************************
-    //! CALCULATE AVERAGE TRIGGERS OVER PAST 3 MINUTES
-    //! ************************************************************************
     unsigned long currentTime = millis();
     unsigned long threeMinutesAgo = currentTime - (3 * 60 * 1000);
-    
-    int validRecords = 0;
-    
-    for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
-        //! ************************************************************************
-        //! CHECK IF RECORD IS WITHIN 3 MINUTE WINDOW AND NOT EMPTY
-        //! ************************************************************************
-        if (cycleBuffer[i].timestamp > threeMinutesAgo && 
-            cycleBuffer[i].timestamp > 0 && 
-            cycleBuffer[i].timestamp <= currentTime) {
-            validRecords++;
-        }
-    }
-    
-    if (validRecords == 0) {
-        return 0.0f;
-    }
-    
-    //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE (CORRECT CALCULATION)
-    //! ************************************************************************
-    float averagePerMinute = (float)validRecords / 3.0f;
-    return averagePerMinute;
-}
-
-float WebDashboard::calculateAverageCycles1Hour() {
-    //! ************************************************************************
-    //! CALCULATE AVERAGE TRIGGERS OVER PAST 1 HOUR
-    //! ************************************************************************
-    unsigned long currentTime = millis();
+    unsigned long fifteenMinutesAgo = currentTime - (15 * 60 * 1000);
     unsigned long oneHourAgo = currentTime - (60 * 60 * 1000);
     
-    int validRecords = 0;
+    int validRecords3Min = 0;
+    int validRecords15Min = 0;
+    int validRecords1Hour = 0;
     
+    //! ************************************************************************
+    //! SINGLE PASS THROUGH CYCLE BUFFER - COUNT RECORDS FOR EACH TIME PERIOD
+    //! ************************************************************************
     for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
-        if (cycleBuffer[i].timestamp > oneHourAgo && cycleBuffer[i].timestamp > 0) {
-            validRecords++;
+        if (cycleBuffer[i].timestamp > 0) {
+            //! ************************************************************************
+            //! 3 MINUTE WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > threeMinutesAgo && 
+                cycleBuffer[i].timestamp <= currentTime) {
+                validRecords3Min++;
+            }
+            
+            //! ************************************************************************
+            //! 15 MINUTE WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > fifteenMinutesAgo) {
+                validRecords15Min++;
+            }
+            
+            //! ************************************************************************
+            //! 1 HOUR WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > oneHourAgo) {
+                validRecords1Hour++;
+            }
         }
     }
     
-    if (validRecords == 0) {
-        return 0.0f;
+    //! ************************************************************************
+    //! CONVERT TO CYCLES PER MINUTE FOR EACH TIME PERIOD
+    //! ************************************************************************
+    if (validRecords3Min > 0) {
+        averages.average3Min = (float)validRecords3Min / 3.0f;
     }
     
-    //! ************************************************************************
-    //! CONVERT TO TRIGGERS PER MINUTE (MORE PRECISE CALCULATION)
-    //! ************************************************************************
-    float averagePerMinute = (float)validRecords / 60.0f;
-    return averagePerMinute;
+    if (validRecords15Min > 0) {
+        averages.average15Min = (float)validRecords15Min / 15.0f;
+    }
+    
+    if (validRecords1Hour > 0) {
+        averages.average1Hour = (float)validRecords1Hour / 60.0f;
+    }
+    
+    return averages;
 }
 
 void WebDashboard::saveCycleDataToEEPROM() {
