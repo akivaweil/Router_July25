@@ -901,12 +901,20 @@ String WebDashboard::getDashboardHTML() {
                 value: average15Min
             });
             
-            //! ************************************************************************
-            //! KEEP EXACTLY 15 DATA POINTS (ONE PER MINUTE)
-            //! ************************************************************************
-            if (graphData.length > 15) {
-                graphData = graphData.slice(-15);
-            }
+        //! ************************************************************************
+        //! KEEP EXACTLY 15 DATA POINTS (ONE PER MINUTE)
+        //! ************************************************************************
+        if (graphData.length > 15) {
+            graphData = graphData.slice(-15);
+        }
+        
+        //! ************************************************************************
+        //! CLEAR GRAPH DATA IF NO RECENT CYCLES (RESET AFTER 5 MINUTES OF INACTIVITY)
+        //! ************************************************************************
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+        if (graphData.length > 0 && graphData[graphData.length - 1].time < fiveMinutesAgo) {
+            graphData = [];
+        }
             
             //! ************************************************************************
             //! CLEAR CANVAS
@@ -930,11 +938,12 @@ String WebDashboard::getDashboardHTML() {
             const valueRange = maxValue - minValue;
             
             //! ************************************************************************
-            //! DRAW GRID LINES (0-10 RANGE)
+            //! DRAW GRID LINES (0-10 RANGE) - CLEANER SPACING
             //! ************************************************************************
             ctx.strokeStyle = '#e0e0e0';
             ctx.lineWidth = 1;
-            for (let i = 0; i <= 10; i++) {
+            // Only draw grid lines every 2 units to match labels
+            for (let i = 0; i <= 10; i += 2) {
                 const y = padding + (i * graphHeight / 10);
                 ctx.beginPath();
                 ctx.moveTo(padding, y);
@@ -943,12 +952,13 @@ String WebDashboard::getDashboardHTML() {
             }
             
             //! ************************************************************************
-            //! DRAW Y-AXIS LABELS (0-10 RANGE)
+            //! DRAW Y-AXIS LABELS (0-10 RANGE) - CLEANER SPACING
             //! ************************************************************************
             ctx.fillStyle = '#666';
             ctx.font = '12px Arial';
             ctx.textAlign = 'right';
-            for (let i = 0; i <= 10; i++) {
+            // Only show every other label to avoid overlap
+            for (let i = 0; i <= 10; i += 2) {
                 const value = 10 - i;
                 const y = padding + (i * graphHeight / 10) + 4;
                 ctx.fillText(value.toString(), padding - 5, y);
