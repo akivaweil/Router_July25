@@ -1413,16 +1413,6 @@ float WebDashboard::calculateAverageCycles3Min() {
     //! CONVERT TO TRIGGERS PER MINUTE (CORRECT CALCULATION)
     //! ************************************************************************
     float averagePerMinute = (float)validRecords / 3.0f;
-    
-    //! ************************************************************************
-    //! DEBUG: TEMPORARY SERIAL OUTPUT TO UNDERSTAND THE CALCULATION
-    //! ************************************************************************
-    Serial.print("3min calc: ");
-    Serial.print(validRecords);
-    Serial.print(" records in 3min = ");
-    Serial.print(averagePerMinute);
-    Serial.println(" per minute");
-    
     return averagePerMinute;
 }
 

@@ -24,7 +24,7 @@ private:
     void* servoPtr;       // Pointer to the servo object
     
     //! ********************** EEPROM SETTINGS ******************************
-    static const int EEPROM_SIZE = 1024;
+    static const int EEPROM_SIZE = 8192; // Increased to accommodate both buffers
     static const int HOME_ANGLE_ADDR = 0;
     static const int TOTAL_CYCLES_ADDR = 16;  // Critical data - saved every cycle
     static const int TRIGGER_DATA_ADDR = 32;  // Buffer data - saved every 10 cycles
@@ -49,7 +49,7 @@ private:
     //! ********************** HOURLY TRACKING *******************************
     static const int MAX_HOURLY_RECORDS = 744; // 31 days * 24 hours
     static const int HOURLY_RECORD_SIZE = sizeof(HourlyData);
-    static const int HOURLY_DATA_ADDR = 200; // Start after cycle buffer
+    static const int HOURLY_DATA_ADDR = 600; // Start after cycle buffer (32 + 480 + padding)
     
     CycleData cycleBuffer[MAX_CYCLE_RECORDS];
     int cycleBufferIndex;
