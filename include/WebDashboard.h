@@ -36,9 +36,7 @@ private:
     };
     
     struct CycleAverages {
-        float average3Min;
-        float average15Min;
-        float average1Hour;
+        float average1Min;
     };
     
     struct HourlyData {
@@ -48,7 +46,7 @@ private:
         uint16_t month; // 1-12
     };
     
-    static const int MAX_CYCLE_RECORDS = 60; // 15 minutes * 4 records per minute
+    static const int MAX_CYCLE_RECORDS = 10; // 1 minute * 10 records per minute
     static const int CYCLE_RECORD_SIZE = sizeof(CycleData);
     static const int CYCLE_BUFFER_SIZE = MAX_CYCLE_RECORDS * CYCLE_RECORD_SIZE;
     
@@ -79,7 +77,7 @@ private:
     void saveCycleDataToEEPROM();
     void loadCycleDataFromEEPROM();
     void addCycleRecord();
-    CycleAverages calculateAllAverages();
+    CycleAverages calculate1MinuteAverage();
     void updateHourlyData();
     void saveHourlyDataToEEPROM();
     void loadHourlyDataFromEEPROM();
