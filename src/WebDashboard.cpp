@@ -1285,8 +1285,8 @@ void WebDashboard::update(bool isIdleState) {
                 lastStatusUpdate = currentTime;
             }
         } else {
-            // Machine was already idle, just update display periodically
-            if (isConnected && currentTime - lastStatusUpdate > 5000) {
+            // Machine was already idle, ping websocket every 3 seconds with fresh data
+            if (isConnected && currentTime - lastStatusUpdate > 3000) {
                 sendStatusUpdate();
                 lastStatusUpdate = currentTime;
             }
