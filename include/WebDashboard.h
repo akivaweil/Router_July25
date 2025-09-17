@@ -87,6 +87,7 @@ private:
     void saveHourlyDataToEEPROM();
     void loadHourlyDataFromEEPROM();
     String getDailyStatsJSON(uint8_t day, uint8_t month);
+    String getCalendarDataJSON(uint8_t month);
     String getDashboardHTML();
     
 public:

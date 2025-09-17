@@ -122,6 +122,19 @@ void WebDashboard::begin() {
     });
     
     //! ************************************************************************
+    //! CALENDAR DATA API ENDPOINT
+    //! ************************************************************************
+    server->on("/calendar-data", HTTP_GET, [this](AsyncWebServerRequest *request) {
+        if (request->hasParam("month")) {
+            uint8_t month = request->getParam("month")->value().toInt();
+            String json = getCalendarDataJSON(month);
+            request->send(200, "application/json", json);
+        } else {
+            request->send(400, "text/plain", "Missing month parameter");
+        }
+    });
+    
+    //! ************************************************************************
     //! START SERVERS
     //! ************************************************************************
     server->begin();
@@ -1097,6 +1110,37 @@ String WebDashboard::getDashboardHTML() {
             }
         }
         
+        //! ************************************************************************
+        //! LOAD CALENDAR DATA FOR CURRENT MONTH
+        //! ************************************************************************
+        function loadCalendarData() {
+            const month = currentDate.getMonth() + 1; // JavaScript months are 0-based
+            fetch(`/calendar-data?month=${month}`)
+                .then(response => response.json())
+                .then(data => {
+                    //! ************************************************************************
+                    //! CLEAR EXISTING DATA
+                    //! ************************************************************************
+                    dailyData = {};
+                    
+                    //! ************************************************************************
+                    //! POPULATE DAILY DATA OBJECT
+                    //! ************************************************************************
+                    data.daysWithData.forEach(day => {
+                        const dayKey = month + '-' + day;
+                        dailyData[dayKey] = true;
+                    });
+                    
+                    //! ************************************************************************
+                    //! REGENERATE CALENDAR WITH NEW DATA
+                    //! ************************************************************************
+                    generateCalendar();
+                })
+                .catch(error => {
+                    console.error('Error loading calendar data:', error);
+                });
+        }
+        
         function selectDate(day, month) {
             selectedDate = { day: day, month: month };
             
@@ -1224,12 +1268,12 @@ String WebDashboard::getDashboardHTML() {
         
         function previousMonth() {
             currentDate.setMonth(currentDate.getMonth() - 1);
-            generateCalendar();
+            loadCalendarData();
         }
         
         function nextMonth() {
             currentDate.setMonth(currentDate.getMonth() + 1);
-            generateCalendar();
+            loadCalendarData();
         }
         
         //! ************************************************************************
@@ -1243,7 +1287,7 @@ String WebDashboard::getDashboardHTML() {
             hourlyCtx = hourlyCanvas.getContext('2d');
             
             initWebSocket();
-            generateCalendar();
+            loadCalendarData();
             
             //! ************************************************************************
             //! UPDATE GRAPH EVERY 30 SECONDS
@@ -1609,6 +1653,9 @@ String WebDashboard::getDailyStatsJSON(uint8_t day, uint8_t month) {
     bool firstHour = true;
     uint16_t totalDayCycles = 0;
     
+    //! ************************************************************************
+    //! ADD SAVED HOURLY DATA FROM EEPROM
+    //! ************************************************************************
     for (int i = 0; i < MAX_HOURLY_RECORDS; i++) {
         if (hourlyBuffer[i].day == day && hourlyBuffer[i].month == month && hourlyBuffer[i].cycles > 0) {
             if (!firstHour) json += ",";
@@ -1621,9 +1668,67 @@ String WebDashboard::getDailyStatsJSON(uint8_t day, uint8_t month) {
         }
     }
     
+    //! ************************************************************************
+    //! ADD CURRENT HOUR'S DATA IF IT'S THE SAME DAY
+    //! ************************************************************************
+    time_t now = time(nullptr);
+    struct tm* timeinfo = localtime(&now);
+    uint8_t currentDay = timeinfo->tm_mday;
+    uint8_t currentMonth = timeinfo->tm_mon + 1;
+    
+    if (currentDay == day && currentMonth == month && currentHourCycles > 0) {
+        if (!firstHour) json += ",";
+        json += "{";
+        json += "\"hour\":" + String(lastHour) + ",";
+        json += "\"cycles\":" + String(currentHourCycles);
+        json += "}";
+        totalDayCycles += currentHourCycles;
+    }
+    
     json += "],";
     json += "\"totalCycles\":" + String(totalDayCycles);
     json += "}";
+    
+    return json;
+}
+
+String WebDashboard::getCalendarDataJSON(uint8_t month) {
+    //! ************************************************************************
+    //! CREATE JSON WITH CALENDAR DATA FOR SPECIFIED MONTH
+    //! ************************************************************************
+    String json = "{";
+    json += "\"month\":" + String(month) + ",";
+    json += "\"daysWithData\":[";
+    
+    bool firstDay = true;
+    
+    //! ************************************************************************
+    //! CHECK SAVED HOURLY DATA FROM EEPROM
+    //! ************************************************************************
+    for (int i = 0; i < MAX_HOURLY_RECORDS; i++) {
+        if (hourlyBuffer[i].month == month && hourlyBuffer[i].cycles > 0) {
+            String dayStr = String(hourlyBuffer[i].day);
+            if (!firstDay) json += ",";
+            json += dayStr;
+            firstDay = false;
+        }
+    }
+    
+    //! ************************************************************************
+    //! CHECK CURRENT HOUR'S DATA IF IT'S THE SAME MONTH
+    //! ************************************************************************
+    time_t now = time(nullptr);
+    struct tm* timeinfo = localtime(&now);
+    uint8_t currentDay = timeinfo->tm_mday;
+    uint8_t currentMonth = timeinfo->tm_mon + 1;
+    
+    if (currentMonth == month && currentHourCycles > 0) {
+        String dayStr = String(currentDay);
+        if (!firstDay) json += ",";
+        json += dayStr;
+    }
+    
+    json += "]}";
     
     return json;
 }
