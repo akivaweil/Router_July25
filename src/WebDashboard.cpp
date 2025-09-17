@@ -748,8 +748,8 @@ String WebDashboard::getDashboardHTML() {
                             <div class="stat-label">Total Cycles</div>
                         </div>
                         <div class="stat-item">
-                            <div class="stat-value" id="average1Min">0.00</div>
-                            <div class="stat-label">Cycles/Min (1min)</div>
+                            <div class="stat-value" id="average1Min">0</div>
+                            <div class="stat-label">Cycles (1min)</div>
                             <div class="time-indicator" id="indicator1Min"></div>
                         </div>
                         <div class="stat-item">
@@ -965,7 +965,7 @@ String WebDashboard::getDashboardHTML() {
             //! ************************************************************************
             const avg1MinEl = document.getElementById('average1Min');
             const indicator1MinEl = document.getElementById('indicator1Min');
-            avg1MinEl.textContent = average1Min.toFixed(1);
+            avg1MinEl.textContent = Math.round(average1Min);
             
             if (average1Min > 0) {
                 avg1MinEl.className = 'stat-value collecting';
