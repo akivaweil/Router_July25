@@ -1148,6 +1148,16 @@ String WebDashboard::getDashboardHTML() {
         }
         
         //! ************************************************************************
+        //! TIME FORMATTING FUNCTIONS
+        //! ************************************************************************
+        function format12Hour(hour24) {
+            if (hour24 === 0) return '12:00 AM';
+            if (hour24 < 12) return hour24 + ':00 AM';
+            if (hour24 === 12) return '12:00 PM';
+            return (hour24 - 12) + ':00 PM';
+        }
+        
+        //! ************************************************************************
         //! CALENDAR FUNCTIONS
         //! ************************************************************************
         function generateCalendar() {
@@ -1291,7 +1301,7 @@ String WebDashboard::getDashboardHTML() {
                     });
                     
                     document.getElementById('peakHour').textContent = 
-                        peakHour + ':00 (' + maxCycles + ' cycles)';
+                        format12Hour(peakHour) + ' (' + maxCycles + ' cycles)';
                     
                     //! ************************************************************************
                     //! DRAW HOURLY CHART
@@ -1360,13 +1370,14 @@ String WebDashboard::getDashboardHTML() {
             });
             
             //! ************************************************************************
-            //! DRAW HOUR LABELS
+            //! DRAW HOUR LABELS (12-HOUR FORMAT)
             //! ************************************************************************
             ctx.fillStyle = '#666';
             ctx.font = '10px Arial';
             ctx.textAlign = 'center';
             for (let i = 0; i < 24; i += 4) {
-                ctx.fillText(i + ':00', i * barWidth + barWidth / 2, canvas.height - 10);
+                const timeLabel = format12Hour(i);
+                ctx.fillText(timeLabel, i * barWidth + barWidth / 2, canvas.height - 10);
             }
             
             //! ************************************************************************
