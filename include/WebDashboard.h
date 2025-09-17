@@ -28,7 +28,7 @@ private:
     static const int HOME_ANGLE_ADDR = 0;
     static const int TOTAL_CYCLES_ADDR = 16;  // Critical data - saved every cycle
     static const int DATA_VERSION_ADDR = 20;  // Version check to detect structure changes
-    static const int DATA_VERSION = 2;  // Increment when data structure changes
+    static const int DATA_VERSION;  // Increment when data structure changes
     static const int TRIGGER_DATA_ADDR = 32;  // Buffer data - saved every 10 cycles
     
     //! ********************** CYCLE TRACKING ******************************
