@@ -132,9 +132,11 @@ void setup() {
     }
     
     //! ************************************************************************
-    //! CONFIGURE TIME (NTP)
+    //! CONFIGURE TIME (NTP) - PACIFIC TIME
     //! ************************************************************************
-    configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+    // Pacific Time: UTC-8 (PST) or UTC-7 (PDT)
+    // Using UTC-8 for Pacific Standard Time
+    configTime(-8 * 3600, 0, "pool.ntp.org", "time.nist.gov");
     while (time(nullptr) < 1000000000) {
         delay(1000);
     }
