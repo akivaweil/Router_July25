@@ -446,6 +446,7 @@ String WebDashboard::getDashboardHTML() {
         .stat-item {
             text-align: center;
             flex: 1;
+            position: relative;
         }
         
         .stat-value {
@@ -453,12 +454,51 @@ String WebDashboard::getDashboardHTML() {
             font-weight: bold;
             color: #667eea;
             margin-bottom: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .stat-value.collecting {
+            color: #ff9500;
+            animation: pulse 2s infinite;
+        }
+        
+        .stat-value.waiting {
+            color: #999;
+            opacity: 0.7;
         }
         
         .stat-label {
             font-size: 0.9em;
             color: #666;
             font-weight: 500;
+        }
+        
+        .stat-label.waiting {
+            color: #999;
+        }
+        
+        .time-indicator {
+            font-size: 0.7em;
+            color: #ff9500;
+            font-weight: 600;
+            margin-top: 2px;
+            animation: blink 1.5s infinite;
+        }
+        
+        .time-indicator.waiting {
+            color: #999;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
         }
         
         .graph-container {
@@ -698,6 +738,10 @@ String WebDashboard::getDashboardHTML() {
             <div class="right-column">
                 <div class="control-group">
                     <label class="control-label">Real-Time Statistics</label>
+                    <div style="font-size: 0.8em; color: #888; margin-bottom: 15px; text-align: center;">
+                        <span style="color: #ff9500;">●</span> Collecting data &nbsp;&nbsp;
+                        <span style="color: #999;">●</span> Waiting for time period
+                    </div>
                     <div class="stats-container">
                         <div class="stat-item">
                             <div class="stat-value" id="totalCycles">0</div>
@@ -705,19 +749,23 @@ String WebDashboard::getDashboardHTML() {
                         </div>
                         <div class="stat-item">
                             <div class="stat-value" id="average1Min">0.00</div>
-                            <div class="stat-label">Avg/Min (1min)</div>
+                            <div class="stat-label">Cycles/Min (1min)</div>
+                            <div class="time-indicator" id="indicator1Min"></div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-value" id="average5Min">0.00</div>
-                            <div class="stat-label">Avg/Min (5min)</div>
+                            <div class="stat-label">Cycles/Min (5min)</div>
+                            <div class="time-indicator" id="indicator5Min"></div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-value" id="average15Min">0.00</div>
-                            <div class="stat-label">Avg/Min (10min)</div>
+                            <div class="stat-label">Cycles/Min (10min)</div>
+                            <div class="time-indicator" id="indicator15Min"></div>
                         </div>
                         <div class="stat-item">
                             <div class="stat-value" id="average30Min">0.00</div>
-                            <div class="stat-label">Avg/Min (15min)</div>
+                            <div class="stat-label">Cycles/Min (15min)</div>
+                            <div class="time-indicator" id="indicator30Min"></div>
                         </div>
                     </div>
                     <div class="graph-container">
@@ -911,10 +959,74 @@ String WebDashboard::getDashboardHTML() {
         //! ************************************************************************
         function updateStatistics() {
             document.getElementById('totalCycles').textContent = totalCycles;
-            document.getElementById('average1Min').textContent = average1Min.toFixed(1);
-            document.getElementById('average5Min').textContent = average5Min.toFixed(1);
-            document.getElementById('average15Min').textContent = average15Min.toFixed(1);
-            document.getElementById('average30Min').textContent = average30Min.toFixed(1);
+            
+            //! ************************************************************************
+            //! UPDATE 1 MINUTE AVERAGE
+            //! ************************************************************************
+            const avg1MinEl = document.getElementById('average1Min');
+            const indicator1MinEl = document.getElementById('indicator1Min');
+            avg1MinEl.textContent = average1Min.toFixed(1);
+            
+            if (average1Min > 0) {
+                avg1MinEl.className = 'stat-value collecting';
+                indicator1MinEl.textContent = 'Collecting...';
+                indicator1MinEl.className = 'time-indicator';
+            } else {
+                avg1MinEl.className = 'stat-value';
+                indicator1MinEl.textContent = '';
+                indicator1MinEl.className = 'time-indicator';
+            }
+            
+            //! ************************************************************************
+            //! UPDATE 5 MINUTE AVERAGE
+            //! ************************************************************************
+            const avg5MinEl = document.getElementById('average5Min');
+            const indicator5MinEl = document.getElementById('indicator5Min');
+            avg5MinEl.textContent = average5Min.toFixed(1);
+            
+            if (average5Min > 0) {
+                avg5MinEl.className = 'stat-value collecting';
+                indicator5MinEl.textContent = 'Collecting...';
+                indicator5MinEl.className = 'time-indicator';
+            } else {
+                avg5MinEl.className = 'stat-value waiting';
+                indicator5MinEl.textContent = 'Waiting for 5min...';
+                indicator5MinEl.className = 'time-indicator waiting';
+            }
+            
+            //! ************************************************************************
+            //! UPDATE 10 MINUTE AVERAGE
+            //! ************************************************************************
+            const avg15MinEl = document.getElementById('average15Min');
+            const indicator15MinEl = document.getElementById('indicator15Min');
+            avg15MinEl.textContent = average15Min.toFixed(1);
+            
+            if (average15Min > 0) {
+                avg15MinEl.className = 'stat-value collecting';
+                indicator15MinEl.textContent = 'Collecting...';
+                indicator15MinEl.className = 'time-indicator';
+            } else {
+                avg15MinEl.className = 'stat-value waiting';
+                indicator15MinEl.textContent = 'Waiting for 10min...';
+                indicator15MinEl.className = 'time-indicator waiting';
+            }
+            
+            //! ************************************************************************
+            //! UPDATE 15 MINUTE AVERAGE
+            //! ************************************************************************
+            const avg30MinEl = document.getElementById('average30Min');
+            const indicator30MinEl = document.getElementById('indicator30Min');
+            avg30MinEl.textContent = average30Min.toFixed(1);
+            
+            if (average30Min > 0) {
+                avg30MinEl.className = 'stat-value collecting';
+                indicator30MinEl.textContent = 'Collecting...';
+                indicator30MinEl.className = 'time-indicator';
+            } else {
+                avg30MinEl.className = 'stat-value waiting';
+                indicator30MinEl.textContent = 'Waiting for 15min...';
+                indicator30MinEl.className = 'time-indicator waiting';
+            }
         }
         
         //! ************************************************************************
@@ -1032,7 +1144,7 @@ String WebDashboard::getDashboardHTML() {
             //! ************************************************************************
             ctx.textAlign = 'center';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText('Cycles per Minute (10 min avg)', canvas.width / 2, 20);
+            ctx.fillText('Real-Time Production Rate (10 min rolling avg)', canvas.width / 2, 20);
         }
         
         //! ************************************************************************
