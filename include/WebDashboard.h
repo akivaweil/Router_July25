@@ -59,7 +59,7 @@ private:
     //! ********************** HOURLY TRACKING *******************************
     static const int MAX_HOURLY_RECORDS = 744; // 31 days * 24 hours
     static const int HOURLY_RECORD_SIZE = sizeof(HourlyData);
-    static const int HOURLY_DATA_ADDR = 120; // Start after cycle buffer (32 + 90 + padding)
+    static const int HOURLY_DATA_ADDR = 128; // Start after cycle buffer (32 + 90 + 8 bytes padding)
     
     CycleData cycleBuffer[MAX_CYCLE_RECORDS];
     int cycleBufferIndex;

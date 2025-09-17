@@ -4,7 +4,7 @@
 //! ************************************************************************
 //! DEFINE STATIC CONSTANTS
 //! ************************************************************************
-const int WebDashboard::DATA_VERSION = 2;
+const int WebDashboard::DATA_VERSION = 3;
 
 //* ************************************************************************
 //* ********************** CONSTRUCTOR *************************************
@@ -1659,6 +1659,7 @@ void WebDashboard::loadCycleDataFromEEPROM() {
     if (storedVersion != DATA_VERSION) {
         //! ************************************************************************
         //! VERSION MISMATCH - PRESERVE TOTAL CYCLES BUT CLEAR BUFFER DATA
+        //! This happens when EEPROM layout changes (e.g., memory overlap fixes)
         //! ************************************************************************
         cycleBufferIndex = 0;
         
