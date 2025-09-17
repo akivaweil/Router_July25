@@ -64,7 +64,7 @@ private:
     CycleData cycleBuffer[MAX_CYCLE_RECORDS];
     int cycleBufferIndex;
     unsigned long lastCycleTime;
-    uint16_t totalCycles;
+    uint32_t totalCycles;  // Use 32-bit to avoid 65535 limit
     bool cycleDataLoaded;
     
     //! ********************** HOURLY DATA ************************************

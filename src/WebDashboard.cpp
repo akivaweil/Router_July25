@@ -1639,11 +1639,17 @@ void WebDashboard::loadCycleDataFromEEPROM() {
     //! ************************************************************************
     //! LOAD TOTAL CYCLES WITH BACKUP VERIFICATION - NEVER RESET THIS VALUE
     //! ************************************************************************
-    uint16_t primaryCycles = 0;
-    uint16_t backupCycles = 0;
+    uint32_t primaryCycles = 0;
+    uint32_t backupCycles = 0;
     
     EEPROM.get(TOTAL_CYCLES_ADDR, primaryCycles);
     EEPROM.get(TOTAL_CYCLES_BACKUP_ADDR, backupCycles);
+    
+    //! ************************************************************************
+    //! VALIDATE LOADED VALUES - DETECT UNINITIALIZED EEPROM (0xFFFFFFFF = 4294967295)
+    //! ************************************************************************
+    if (primaryCycles == 0xFFFFFFFF) primaryCycles = 0;
+    if (backupCycles == 0xFFFFFFFF) backupCycles = 0;
     
     //! ************************************************************************
     //! USE THE HIGHER VALUE BETWEEN PRIMARY AND BACKUP (SAFETY MECHANISM)
