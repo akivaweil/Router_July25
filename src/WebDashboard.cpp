@@ -168,15 +168,18 @@ void WebDashboard::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
 void WebDashboard::sendStatusUpdate() {
     if (isConnected && homeAnglePtr != nullptr) {
         //! ************************************************************************
-        //! CALCULATE 1-MINUTE AVERAGE
+        //! CALCULATE ALL TIME PERIOD AVERAGES
         //! ************************************************************************
-        CycleAverages averages = calculate1MinuteAverage();
+        CycleAverages averages = calculateAllAverages();
         
         String json = "{";
         json += "\"type\":\"status\",";
         json += "\"homeAngle\":" + String(*homeAnglePtr, 1) + ",";
         json += "\"totalCycles\":" + String(totalCycles) + ",";
-        json += "\"average1Min\":" + String(averages.average1Min, 1);
+        json += "\"average1Min\":" + String(averages.average1Min, 1) + ",";
+        json += "\"average5Min\":" + String(averages.average5Min, 1) + ",";
+        json += "\"average15Min\":" + String(averages.average15Min, 1) + ",";
+        json += "\"average30Min\":" + String(averages.average30Min, 1);
         json += "}";
         webSocket->broadcastTXT(json);
     }
@@ -417,7 +420,7 @@ String WebDashboard::getDashboardHTML() {
         
         .stats-container {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(5, 1fr);
             gap: 15px;
             margin: 20px 0;
         }
@@ -603,7 +606,7 @@ String WebDashboard::getDashboardHTML() {
             }
             
             .stats-container {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
             }
         }
         
@@ -686,6 +689,18 @@ String WebDashboard::getDashboardHTML() {
                             <div class="stat-value" id="average1Min">0.00</div>
                             <div class="stat-label">Avg/Min (1min)</div>
                         </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="average5Min">0.00</div>
+                            <div class="stat-label">Avg/Min (5min)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="average15Min">0.00</div>
+                            <div class="stat-label">Avg/Min (10min)</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="average30Min">0.00</div>
+                            <div class="stat-label">Avg/Min (15min)</div>
+                        </div>
                     </div>
                     <div class="graph-container">
                         <canvas id="triggerGraph" width="600" height="200"></canvas>
@@ -734,6 +749,9 @@ String WebDashboard::getDashboardHTML() {
         let currentAngle = 90.0;
         let totalCycles = 0;
         let average1Min = 0.0;
+        let average5Min = 0.0;
+        let average15Min = 0.0;
+        let average30Min = 0.0;
         let graphData = [];
         let canvas, ctx;
         
@@ -773,6 +791,9 @@ String WebDashboard::getDashboardHTML() {
                         currentAngle = data.homeAngle;
                         totalCycles = data.totalCycles || 0;
                         average1Min = data.average1Min || 0.0;
+                        average5Min = data.average5Min || 0.0;
+                        average15Min = data.average15Min || 0.0;
+                        average30Min = data.average30Min || 0.0;
                         updateDisplay(currentAngle);
                         updateStatistics();
                         updateGraph();
@@ -873,6 +894,9 @@ String WebDashboard::getDashboardHTML() {
         function updateStatistics() {
             document.getElementById('totalCycles').textContent = totalCycles;
             document.getElementById('average1Min').textContent = average1Min.toFixed(1);
+            document.getElementById('average5Min').textContent = average5Min.toFixed(1);
+            document.getElementById('average15Min').textContent = average15Min.toFixed(1);
+            document.getElementById('average30Min').textContent = average30Min.toFixed(1);
         }
         
         //! ************************************************************************
@@ -887,7 +911,7 @@ String WebDashboard::getDashboardHTML() {
             const now = new Date();
             graphData.push({
                 time: now,
-                value: average1Min
+                value: average15Min
             });
             
         //! ************************************************************************
@@ -990,7 +1014,7 @@ String WebDashboard::getDashboardHTML() {
             //! ************************************************************************
             ctx.textAlign = 'center';
             ctx.font = 'bold 14px Arial';
-            ctx.fillText('Cycles per Minute (1 min avg)', canvas.width / 2, 20);
+            ctx.fillText('Cycles per Minute (10 min avg)', canvas.width / 2, 20);
         }
         
         //! ************************************************************************
@@ -1285,7 +1309,7 @@ void WebDashboard::update(bool isIdleState) {
             }
         } else {
             // Machine was already idle, ping websocket every 3 seconds with fresh data
-            if (isConnected && currentTime - lastStatusUpdate > 3000) {
+            if (isConnected && currentTime - lastStatusUpdate > 2000) {
                 sendStatusUpdate();
                 lastStatusUpdate = currentTime;
             }
@@ -1348,32 +1372,65 @@ void WebDashboard::addCycleRecord() {
     cycleBufferIndex = (cycleBufferIndex + 1) % MAX_CYCLE_RECORDS;
 }
 
-WebDashboard::CycleAverages WebDashboard::calculate1MinuteAverage() {
+WebDashboard::CycleAverages WebDashboard::calculateAllAverages() {
     //! ************************************************************************
-    //! CALCULATE 1-MINUTE AVERAGE - SIMPLE AND RELIABLE
+    //! CALCULATE ALL TIME PERIOD AVERAGES - SIMPLE AND RELIABLE
     //! ************************************************************************
-    CycleAverages averages = {0.0f};
+    CycleAverages averages = {0.0f, 0.0f, 0.0f, 0.0f};
     
     unsigned long currentTime = millis();
     unsigned long oneMinuteAgo = currentTime - (1 * 60 * 1000);
+    unsigned long fiveMinutesAgo = currentTime - (5 * 60 * 1000);
+    unsigned long tenMinutesAgo = currentTime - (10 * 60 * 1000);
+    unsigned long fifteenMinutesAgo = currentTime - (15 * 60 * 1000);
     
-    int validRecords = 0;
+    int validRecords1Min = 0;
+    int validRecords5Min = 0;
+    int validRecords10Min = 0;
+    int validRecords15Min = 0;
     
     //! ************************************************************************
-    //! COUNT CYCLES IN THE PAST 1 MINUTE
+    //! COUNT CYCLES IN EACH TIME PERIOD
     //! ************************************************************************
     for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
-        if (cycleBuffer[i].timestamp > 0 && cycleBuffer[i].timestamp > oneMinuteAgo) {
-            validRecords++;
+        if (cycleBuffer[i].timestamp > 0) {
+            //! ************************************************************************
+            //! 1 MINUTE WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > oneMinuteAgo) {
+                validRecords1Min++;
+            }
+            
+            //! ************************************************************************
+            //! 5 MINUTE WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > fiveMinutesAgo) {
+                validRecords5Min++;
+            }
+            
+            //! ************************************************************************
+            //! 10 MINUTE WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > tenMinutesAgo) {
+                validRecords10Min++;
+            }
+            
+            //! ************************************************************************
+            //! 15 MINUTE WINDOW
+            //! ************************************************************************
+            if (cycleBuffer[i].timestamp > fifteenMinutesAgo) {
+                validRecords15Min++;
+            }
         }
     }
     
     //! ************************************************************************
-    //! CALCULATE CYCLES PER MINUTE
+    //! CALCULATE CYCLES PER MINUTE FOR EACH TIME PERIOD
     //! ************************************************************************
-    if (validRecords > 0) {
-        averages.average1Min = (float)validRecords; // Simple count of cycles in past minute
-    }
+    averages.average1Min = (float)validRecords1Min; // Cycles in past 1 minute
+    averages.average5Min = (float)validRecords5Min / 5.0f; // Cycles per minute over 5 minutes
+    averages.average15Min = (float)validRecords10Min / 10.0f; // Cycles per minute over 10 minutes
+    averages.average30Min = (float)validRecords15Min / 15.0f; // Cycles per minute over 15 minutes
     
     return averages;
 }
@@ -1388,6 +1445,34 @@ void WebDashboard::saveCycleDataToEEPROM() {
 }
 
 void WebDashboard::loadCycleDataFromEEPROM() {
+    //! ************************************************************************
+    //! CHECK DATA VERSION COMPATIBILITY
+    //! ************************************************************************
+    int storedVersion = 0;
+    EEPROM.get(DATA_VERSION_ADDR, storedVersion);
+    
+    if (storedVersion != DATA_VERSION) {
+        //! ************************************************************************
+        //! VERSION MISMATCH - CLEAR ALL DATA AND START FRESH
+        //! ************************************************************************
+        totalCycles = 0;
+        cycleBufferIndex = 0;
+        
+        // Clear the cycle buffer
+        for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
+            cycleBuffer[i].timestamp = 0;
+            cycleBuffer[i].cycle_count = 0;
+        }
+        
+        // Save the new version
+        EEPROM.put(DATA_VERSION_ADDR, DATA_VERSION);
+        EEPROM.put(TOTAL_CYCLES_ADDR, totalCycles);
+        EEPROM.commit();
+        
+        cycleDataLoaded = true;
+        return;
+    }
+    
     //! ************************************************************************
     //! LOAD CRITICAL DATA (TOTAL CYCLES) FROM EEPROM
     //! ************************************************************************
@@ -1410,11 +1495,11 @@ void WebDashboard::loadCycleDataFromEEPROM() {
     //! CLEAR OLD TIMESTAMPS TO PREVENT STALE DATA FROM AFFECTING AVERAGES
     //! ************************************************************************
     unsigned long currentTime = millis();
-    unsigned long oneMinuteAgo = currentTime - (1 * 60 * 1000);
+    unsigned long fifteenMinutesAgo = currentTime - (15 * 60 * 1000);
     
     for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
-        // If timestamp is older than 1 minute or is 0 (uninitialized), clear it
-        if (cycleBuffer[i].timestamp == 0 || cycleBuffer[i].timestamp < oneMinuteAgo) {
+        // If timestamp is older than 15 minutes or is 0 (uninitialized), clear it
+        if (cycleBuffer[i].timestamp == 0 || cycleBuffer[i].timestamp < fifteenMinutesAgo) {
             cycleBuffer[i].timestamp = 0;
             cycleBuffer[i].cycle_count = 0;
         }

@@ -27,6 +27,8 @@ private:
     static const int EEPROM_SIZE = 8192; // Increased to accommodate both buffers
     static const int HOME_ANGLE_ADDR = 0;
     static const int TOTAL_CYCLES_ADDR = 16;  // Critical data - saved every cycle
+    static const int DATA_VERSION_ADDR = 20;  // Version check to detect structure changes
+    static const int DATA_VERSION = 2;  // Increment when data structure changes
     static const int TRIGGER_DATA_ADDR = 32;  // Buffer data - saved every 10 cycles
     
     //! ********************** CYCLE TRACKING ******************************
@@ -37,6 +39,9 @@ private:
     
     struct CycleAverages {
         float average1Min;
+        float average5Min;
+        float average15Min;
+        float average30Min;
     };
     
     struct HourlyData {
@@ -46,14 +51,14 @@ private:
         uint16_t month; // 1-12
     };
     
-    static const int MAX_CYCLE_RECORDS = 10; // 1 minute * 10 records per minute
+    static const int MAX_CYCLE_RECORDS = 15; // 15 minutes * 1 record per minute
     static const int CYCLE_RECORD_SIZE = sizeof(CycleData);
     static const int CYCLE_BUFFER_SIZE = MAX_CYCLE_RECORDS * CYCLE_RECORD_SIZE;
     
     //! ********************** HOURLY TRACKING *******************************
     static const int MAX_HOURLY_RECORDS = 744; // 31 days * 24 hours
     static const int HOURLY_RECORD_SIZE = sizeof(HourlyData);
-    static const int HOURLY_DATA_ADDR = 600; // Start after cycle buffer (32 + 480 + padding)
+    static const int HOURLY_DATA_ADDR = 120; // Start after cycle buffer (32 + 90 + padding)
     
     CycleData cycleBuffer[MAX_CYCLE_RECORDS];
     int cycleBufferIndex;
@@ -77,7 +82,7 @@ private:
     void saveCycleDataToEEPROM();
     void loadCycleDataFromEEPROM();
     void addCycleRecord();
-    CycleAverages calculate1MinuteAverage();
+    CycleAverages calculateAllAverages();
     void updateHourlyData();
     void saveHourlyDataToEEPROM();
     void loadHourlyDataFromEEPROM();
