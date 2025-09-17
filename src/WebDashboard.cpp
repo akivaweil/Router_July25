@@ -1646,10 +1646,14 @@ void WebDashboard::loadCycleDataFromEEPROM() {
     EEPROM.get(TOTAL_CYCLES_BACKUP_ADDR, backupCycles);
     
     //! ************************************************************************
-    //! VALIDATE LOADED VALUES - DETECT UNINITIALIZED EEPROM (0xFFFFFFFF = 4294967295)
+    //! VALIDATE LOADED VALUES - DETECT UNINITIALIZED OR CORRUPTED EEPROM
     //! ************************************************************************
-    if (primaryCycles == 0xFFFFFFFF) primaryCycles = 0;
-    if (backupCycles == 0xFFFFFFFF) backupCycles = 0;
+    // Check for uninitialized EEPROM (0xFFFFFFFF = 4294967295) or unreasonably high values
+    // Set reasonable maximum of 1 million cycles (1,000,000)
+    const uint32_t MAX_REASONABLE_CYCLES = 1000000;
+    
+    if (primaryCycles == 0xFFFFFFFF || primaryCycles > MAX_REASONABLE_CYCLES) primaryCycles = 0;
+    if (backupCycles == 0xFFFFFFFF || backupCycles > MAX_REASONABLE_CYCLES) backupCycles = 0;
     
     //! ************************************************************************
     //! USE THE HIGHER VALUE BETWEEN PRIMARY AND BACKUP (SAFETY MECHANISM)
