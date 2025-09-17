@@ -5,6 +5,7 @@
 //! DEFINE STATIC CONSTANTS
 //! ************************************************************************
 const int WebDashboard::DATA_VERSION = 3;
+const char* WebDashboard::GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec";
 
 //* ************************************************************************
 //* ********************** CONSTRUCTOR *************************************
@@ -53,6 +54,12 @@ WebDashboard::WebDashboard() {
         hourlyBuffer[i].day = 0;
         hourlyBuffer[i].month = 0;
     }
+    
+    //! ************************************************************************
+    //! INITIALIZE CLOUD SYNC VARIABLES
+    //! ************************************************************************
+    lastCloudSync = 0;
+    lastSyncedTotalCycles = 0;
 }
 
 //* ************************************************************************
@@ -1480,6 +1487,14 @@ void WebDashboard::update(bool isIdleState) {
                 sendStatusUpdate();
                 lastStatusUpdate = currentTime;
             }
+            
+            //! ************************************************************************
+            //! SYNC TO GOOGLE SHEETS EVERY 30 SECONDS
+            //! ************************************************************************
+            if (currentTime - lastCloudSync > CLOUD_SYNC_INTERVAL) {
+                syncToGoogleSheets();
+                lastCloudSync = currentTime;
+            }
         }
         
         wasInActiveCycle = false; // Reset flag for next cycle
@@ -1882,5 +1897,68 @@ String WebDashboard::getCalendarDataJSON(uint8_t month) {
     json += "]}";
     
     return json;
+}
+
+//* ************************************************************************
+//* ********************** GOOGLE SHEETS SYNC ******************************
+//* ************************************************************************
+
+void WebDashboard::syncToGoogleSheets() {
+    //! ************************************************************************
+    //! ONLY SYNC IF TOTAL CYCLES HAVE CHANGED
+    //! ************************************************************************
+    if (totalCycles == lastSyncedTotalCycles) {
+        return; // No new data to sync
+    }
+    
+    //! ************************************************************************
+    //! CREATE JSON DATA FOR GOOGLE SHEETS
+    //! ************************************************************************
+    StaticJsonDocument<512> doc;
+    
+    // Get current time
+    time_t now = time(nullptr);
+    struct tm* timeinfo = localtime(&now);
+    
+    // Add timestamp
+    char timestamp[64];
+    strftime(timestamp, sizeof(timestamp), "%Y-%m-%d %H:%M:%S", timeinfo);
+    doc["timestamp"] = timestamp;
+    
+    // Add production data
+    doc["total_cycles"] = totalCycles;
+    doc["current_hour_cycles"] = currentHourCycles;
+    doc["hour"] = timeinfo->tm_hour;
+    doc["day"] = timeinfo->tm_mday;
+    doc["month"] = timeinfo->tm_mon + 1;
+    doc["year"] = timeinfo->tm_year + 1900;
+    
+    // Add averages
+    CycleAverages averages = calculateAllAverages();
+    doc["avg_1min"] = averages.average1Min;
+    doc["avg_5min"] = averages.average5Min;
+    doc["avg_15min"] = averages.average15Min;
+    doc["avg_30min"] = averages.average30Min;
+    
+    //! ************************************************************************
+    //! SEND DATA TO GOOGLE SHEETS
+    //! ************************************************************************
+    HTTPClient http;
+    http.begin(GOOGLE_SCRIPT_URL);
+    http.addHeader("Content-Type", "application/json");
+    
+    String jsonString;
+    serializeJson(doc, jsonString);
+    
+    int httpResponseCode = http.POST(jsonString);
+    
+    if (httpResponseCode > 0) {
+        String response = http.getString();
+        if (httpResponseCode == 200) {
+            lastSyncedTotalCycles = totalCycles;
+        }
+    }
+    
+    http.end();
 }
 
