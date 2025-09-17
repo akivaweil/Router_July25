@@ -1459,9 +1459,8 @@ void WebDashboard::update(bool isIdleState) {
         //! ************************************************************************
         if (wasInActiveCycle) {
             // Machine just completed a cycle and returned to idle - save EEPROM data
-            EEPROM.put(TOTAL_CYCLES_ADDR, totalCycles);
+            saveTotalCyclesToEEPROM();
             saveCycleDataToEEPROM();
-            EEPROM.commit();
             
             // Update display immediately after cycle completion
             if (isConnected) {
@@ -1505,6 +1504,11 @@ void WebDashboard::recordCycle() {
     totalCycles++;
     
     //! ************************************************************************
+    //! IMMEDIATELY SAVE TOTAL CYCLES TO EEPROM FOR MAXIMUM RELIABILITY
+    //! ************************************************************************
+    saveTotalCyclesToEEPROM();
+    
+    //! ************************************************************************
     //! ADD NEW CYCLE RECORD (MINIMAL OPERATION)
     //! ************************************************************************
     addCycleRecord();
@@ -1517,7 +1521,7 @@ void WebDashboard::recordCycle() {
     //! ************************************************************************
     //! DEFER HEAVY OPERATIONS TO NON-CRITICAL TIME
     //! ************************************************************************
-    // EEPROM operations and status updates will be handled in update() when idle
+    // Other EEPROM operations and status updates will be handled in update() when idle
 }
 
 void WebDashboard::addCycleRecord() {
@@ -1605,6 +1609,15 @@ void WebDashboard::saveCycleDataToEEPROM() {
     EEPROM.commit();
 }
 
+void WebDashboard::saveTotalCyclesToEEPROM() {
+    //! ************************************************************************
+    //! SAVE TOTAL CYCLES WITH BACKUP FOR MAXIMUM RELIABILITY
+    //! ************************************************************************
+    EEPROM.put(TOTAL_CYCLES_ADDR, totalCycles);
+    EEPROM.put(TOTAL_CYCLES_BACKUP_ADDR, totalCycles);
+    EEPROM.commit();
+}
+
 void WebDashboard::loadCycleDataFromEEPROM() {
     //! ************************************************************************
     //! CHECK DATA VERSION COMPATIBILITY
@@ -1612,32 +1625,40 @@ void WebDashboard::loadCycleDataFromEEPROM() {
     int storedVersion = 0;
     EEPROM.get(DATA_VERSION_ADDR, storedVersion);
     
+    //! ************************************************************************
+    //! LOAD TOTAL CYCLES WITH BACKUP VERIFICATION - NEVER RESET THIS VALUE
+    //! ************************************************************************
+    uint16_t primaryCycles = 0;
+    uint16_t backupCycles = 0;
+    
+    EEPROM.get(TOTAL_CYCLES_ADDR, primaryCycles);
+    EEPROM.get(TOTAL_CYCLES_BACKUP_ADDR, backupCycles);
+    
+    //! ************************************************************************
+    //! USE THE HIGHER VALUE BETWEEN PRIMARY AND BACKUP (SAFETY MECHANISM)
+    //! ************************************************************************
+    totalCycles = max(primaryCycles, backupCycles);
+    
     if (storedVersion != DATA_VERSION) {
         //! ************************************************************************
-        //! VERSION MISMATCH - CLEAR ALL DATA AND START FRESH
+        //! VERSION MISMATCH - PRESERVE TOTAL CYCLES BUT CLEAR BUFFER DATA
         //! ************************************************************************
-        totalCycles = 0;
         cycleBufferIndex = 0;
         
-        // Clear the cycle buffer
+        // Clear the cycle buffer (but keep totalCycles intact)
         for (int i = 0; i < MAX_CYCLE_RECORDS; i++) {
             cycleBuffer[i].timestamp = 0;
             cycleBuffer[i].cycle_count = 0;
         }
         
-        // Save the new version
+        // Save the new version and preserve totalCycles with backup
         EEPROM.put(DATA_VERSION_ADDR, DATA_VERSION);
-        EEPROM.put(TOTAL_CYCLES_ADDR, totalCycles);
+        saveTotalCyclesToEEPROM();
         EEPROM.commit();
         
         cycleDataLoaded = true;
         return;
     }
-    
-    //! ************************************************************************
-    //! LOAD CRITICAL DATA (TOTAL CYCLES) FROM EEPROM
-    //! ************************************************************************
-    EEPROM.get(TOTAL_CYCLES_ADDR, totalCycles);
     
     //! ************************************************************************
     //! LOAD CYCLE BUFFER FROM EEPROM
