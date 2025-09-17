@@ -6,8 +6,6 @@
 #include <WebSocketsServer.h>
 #include <ESPAsyncWebServer.h>
 #include <EEPROM.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
 
 //* ************************************************************************
 //* ********************** WEB DASHBOARD CLASS *****************************
@@ -33,10 +31,6 @@ private:
     static const int DATA_VERSION_ADDR = 24;  // Version check to detect structure changes
     static const int DATA_VERSION;  // Increment when data structure changes
     static const int TRIGGER_DATA_ADDR = 32;  // Buffer data - saved every 10 cycles
-    
-    //! ********************** GOOGLE SHEETS SETTINGS ************************
-    static const char* GOOGLE_SCRIPT_URL;  // Google Apps Script URL for data logging
-    static const int CLOUD_SYNC_INTERVAL = 30000;  // Sync to cloud every 30 seconds
     
     //! ********************** CYCLE TRACKING ******************************
     struct CycleData {
@@ -81,10 +75,6 @@ private:
     uint8_t lastDay;
     uint8_t lastMonth;
     
-    //! ********************** CLOUD SYNC *************************************
-    unsigned long lastCloudSync;
-    uint32_t lastSyncedTotalCycles;
-    
     //! ********************** PRIVATE METHODS ******************************
     void handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length);
     void sendStatusUpdate();
@@ -98,7 +88,6 @@ private:
     void updateHourlyData();
     void saveHourlyDataToEEPROM();
     void loadHourlyDataFromEEPROM();
-    void syncToGoogleSheets();
     String getDailyStatsJSON(uint8_t day, uint8_t month);
     String getCalendarDataJSON(uint8_t month);
     String getDashboardHTML();
