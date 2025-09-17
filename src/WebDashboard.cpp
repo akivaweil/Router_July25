@@ -738,10 +738,6 @@ String WebDashboard::getDashboardHTML() {
             <div class="right-column">
                 <div class="control-group">
                     <label class="control-label">Real-Time Statistics</label>
-                    <div style="font-size: 0.8em; color: #888; margin-bottom: 15px; text-align: center;">
-                        <span style="color: #ff9500;">●</span> Collecting data &nbsp;&nbsp;
-                        <span style="color: #999;">●</span> Waiting for time period
-                    </div>
                     <div class="stats-container">
                         <div class="stat-item">
                             <div class="stat-value" id="totalCycles">0</div>
@@ -969,7 +965,7 @@ String WebDashboard::getDashboardHTML() {
             
             if (average1Min > 0) {
                 avg1MinEl.className = 'stat-value collecting';
-                indicator1MinEl.textContent = 'Collecting...';
+                indicator1MinEl.textContent = '';
                 indicator1MinEl.className = 'time-indicator';
             } else {
                 avg1MinEl.className = 'stat-value';
@@ -986,11 +982,11 @@ String WebDashboard::getDashboardHTML() {
             
             if (average5Min > 0) {
                 avg5MinEl.className = 'stat-value collecting';
-                indicator5MinEl.textContent = 'Collecting...';
+                indicator5MinEl.textContent = '';
                 indicator5MinEl.className = 'time-indicator';
             } else {
                 avg5MinEl.className = 'stat-value waiting';
-                indicator5MinEl.textContent = 'Waiting for 5min...';
+                indicator5MinEl.textContent = '';
                 indicator5MinEl.className = 'time-indicator waiting';
             }
             
@@ -1003,11 +999,11 @@ String WebDashboard::getDashboardHTML() {
             
             if (average15Min > 0) {
                 avg15MinEl.className = 'stat-value collecting';
-                indicator15MinEl.textContent = 'Collecting...';
+                indicator15MinEl.textContent = '';
                 indicator15MinEl.className = 'time-indicator';
             } else {
                 avg15MinEl.className = 'stat-value waiting';
-                indicator15MinEl.textContent = 'Waiting for 10min...';
+                indicator15MinEl.textContent = '';
                 indicator15MinEl.className = 'time-indicator waiting';
             }
             
@@ -1020,11 +1016,11 @@ String WebDashboard::getDashboardHTML() {
             
             if (average30Min > 0) {
                 avg30MinEl.className = 'stat-value collecting';
-                indicator30MinEl.textContent = 'Collecting...';
+                indicator30MinEl.textContent = '';
                 indicator30MinEl.className = 'time-indicator';
             } else {
                 avg30MinEl.className = 'stat-value waiting';
-                indicator30MinEl.textContent = 'Waiting for 15min...';
+                indicator30MinEl.textContent = '';
                 indicator30MinEl.className = 'time-indicator waiting';
             }
         }
