@@ -24,7 +24,7 @@ private:
     void* servoPtr;       // Pointer to the servo object
     
     //! ********************** EEPROM SETTINGS ******************************
-    static const int EEPROM_SIZE = 8192; // Increased to accommodate both buffers
+    static const int EEPROM_SIZE = 1024;
     static const int HOME_ANGLE_ADDR = 0;
     static const int TOTAL_CYCLES_ADDR = 16;  // Critical data - saved every cycle
     static const int TRIGGER_DATA_ADDR = 32;  // Buffer data - saved every 10 cycles
@@ -35,10 +35,6 @@ private:
         uint16_t cycle_count;
     };
     
-    struct CycleAverages {
-        float average1Min;
-    };
-    
     struct HourlyData {
         uint16_t cycles;
         uint16_t hour;  // 0-23
@@ -46,14 +42,14 @@ private:
         uint16_t month; // 1-12
     };
     
-    static const int MAX_CYCLE_RECORDS = 10; // 1 minute * 10 records per minute
+    static const int MAX_CYCLE_RECORDS = 60; // 15 minutes * 4 records per minute
     static const int CYCLE_RECORD_SIZE = sizeof(CycleData);
     static const int CYCLE_BUFFER_SIZE = MAX_CYCLE_RECORDS * CYCLE_RECORD_SIZE;
     
     //! ********************** HOURLY TRACKING *******************************
     static const int MAX_HOURLY_RECORDS = 744; // 31 days * 24 hours
     static const int HOURLY_RECORD_SIZE = sizeof(HourlyData);
-    static const int HOURLY_DATA_ADDR = 600; // Start after cycle buffer (32 + 480 + padding)
+    static const int HOURLY_DATA_ADDR = 200; // Start after cycle buffer
     
     CycleData cycleBuffer[MAX_CYCLE_RECORDS];
     int cycleBufferIndex;
@@ -77,7 +73,9 @@ private:
     void saveCycleDataToEEPROM();
     void loadCycleDataFromEEPROM();
     void addCycleRecord();
-    CycleAverages calculate1MinuteAverage();
+    float calculateAverageCycles();
+    float calculateAverageCycles3Min();
+    float calculateAverageCycles1Hour();
     void updateHourlyData();
     void saveHourlyDataToEEPROM();
     void loadHourlyDataFromEEPROM();
