@@ -41,22 +41,22 @@ void handleFlippingState() {
     }
     
     //! ************************************************************************
-    //! STEP 3: MOVE SERVO TO 105 DEGREES
+    //! STEP 3: MOVE SERVO TO 120 DEGREES
     //! ************************************************************************
     else if (currentStep == 3.0f) {
-        log_state_step("State: FLIPPING - Step 3: Moving servo to 105 degrees.");
-        flipServo.write(105.0f);
+        log_state_step("State: FLIPPING - Step 3: Moving servo to 120 degrees.");
+        flipServo.write(120.0f);
         stepStartTime = millis();
         currentStep = 4.0f;
     }
 
     //! ************************************************************************
-    //! STEP 4: WAIT FOR SERVO TO REACH 105 DEGREES
+    //! STEP 4: WAIT FOR SERVO TO REACH 120 DEGREES
     //! ************************************************************************
     else if (currentStep == 4.0f) {
-        log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach 105 degrees.");
+        log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach 120 degrees.");
         if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached 105 degrees.");
+            Serial.println("                 - Servo has reached 120 degrees.");
             currentStep = 5.0f;
         }
     }
