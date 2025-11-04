@@ -7,12 +7,13 @@
 //* ************************************************************************
 //* ********************** STATE ENUMERATION *******************************
 //* ************************************************************************
-enum State { 
-    S_NONE, 
-    S_IDLE, 
-    S_FEEDING, 
-    S_FLIPPING, 
-    S_FEEDING2 
+enum State {
+    S_NONE,
+    S_IDLE,
+    S_FEEDING,
+    S_FLIPPING,
+    S_FEEDING2,
+    S_BOARD_END
 };
 
 //* ************************************************************************
@@ -31,6 +32,7 @@ extern State currentState;
 extern unsigned long stateStartTime;
 extern unsigned long stepStartTime;
 extern float currentStep;
+extern bool boardEndModeActive;
 
 //* ************************************************************************
 //* ********************** HELPER FUNCTIONS ********************************

@@ -8,6 +8,19 @@
 //* ************************************************************************
 void handleFlippingState() {
     //! ************************************************************************
+    //! CHECK IF BOARD END MODE IS ACTIVE - SKIP SERVO ROTATION
+    //! ************************************************************************
+    if (boardEndModeActive) {
+        log_state_step("State: FLIPPING - Board end mode active, skipping servo rotation.");
+        Serial.println("                 - Board end mode: Servo stays at current position.");
+        Serial.println("                 - Transitioning to FEEDING2 state.");
+        currentState = S_FEEDING2;  // Skip flipping, go directly to second feeding
+        stateStartTime = millis();
+        currentStep = 1.0f;
+        return;
+    }
+
+    //! ************************************************************************
     //! STEP 1: MOVE SERVO TO FLIP POSITION
     //! ************************************************************************
     if (currentStep == 1.0f) {

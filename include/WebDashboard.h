@@ -22,6 +22,7 @@ private:
     bool isConnected;
     float* homeAnglePtr;  // Pointer to the home angle variable
     void* servoPtr;       // Pointer to the servo object
+    bool* boardEndModePtr; // Pointer to the board end mode variable
     
     //! ********************** EEPROM SETTINGS ******************************
     static const int EEPROM_SIZE = 512;
@@ -39,11 +40,12 @@ public:
     WebDashboard();
     
     //! ********************** INITIALIZATION *******************************
-    void init(float* homeAngle, void* servo);
+    void init(float* homeAngle, void* servo, bool* boardEndMode);
     void begin();
     
     //! ********************** CONTROL METHODS ******************************
     void setHomeAngle(float angle);
+    void setBoardEndMode(bool enabled);
     void update();
     
     //! ********************** STATUS METHODS *******************************
