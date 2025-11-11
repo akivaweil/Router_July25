@@ -60,7 +60,19 @@ void handleFlippingState() {
     else if (currentStep == 4.0f) {
         log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach pre-home position.");
         if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached pre-home position (110 degrees).");
+            Serial.println("                 - Servo has reached pre-home position (180 degrees).");
+            stepStartTime = millis();
+            currentStep = 4.5f;
+        }
+    }
+
+    //! ************************************************************************
+    //! STEP 4.5: EXTRA WAIT FOR SERVO TO SETTLE AT PRE-HOME POSITION
+    //! ************************************************************************
+    else if (currentStep == 4.5f) {
+        log_state_step("State: FLIPPING - Step 4.5: Extra wait for servo to settle at pre-home position.");
+        if (millis() - stepStartTime >= 2000) {
+            Serial.println("                 - Servo settle time complete. Moving to home position.");
             currentStep = 5.0f;
         }
     }
