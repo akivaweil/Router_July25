@@ -55,7 +55,7 @@ void handleFlippingState() {
     }
 
     //! ************************************************************************
-    //! STEP 4: WAIT FOR SERVO TO REACH PRE-HOME POSITION
+    //! STEP 4: WAIT FOR SERVO TO REACH PRE-HOME POSITION AND EXTRA SETTLE TIME
     //! ************************************************************************
     else if (currentStep == 4.0f) {
         log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach pre-home position.");
@@ -72,28 +72,10 @@ void handleFlippingState() {
     else if (currentStep == 4.5f) {
         log_state_step("State: FLIPPING - Step 4.5: Extra wait for servo to settle at pre-home position.");
         if (millis() - stepStartTime >= 2000) {
-            Serial.println("                 - Servo settle time complete. Moving to home position.");
-            currentStep = 5.0f;
-        }
-    }
-
-    //! ************************************************************************
-    //! STEP 5: MOVE SERVO BACK TO HOME POSITION
-    //! ************************************************************************
-    else if (currentStep == 5.0f) {
-        log_state_step("State: FLIPPING - Step 5: Moving servo back to home position.");
-        flipServo.write(SERVO_HOME_ANGLE);
-        stepStartTime = millis();
-        currentStep = 6.0f;
-    }
-
-    //! ************************************************************************
-    //! STEP 6: WAIT FOR SERVO TO RETURN HOME
-    //! ************************************************************************
-    else if (currentStep == 6.0f) {
-        log_state_step("State: FLIPPING - Step 6: Waiting for servo to return home.");
-        if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has returned home. Transitioning to FEEDING2 state.");
+            Serial.println("                 - Servo settle time complete. Starting servo return to home and transitioning to FEEDING2.");
+            // Start servo returning home (happens in parallel with FEEDING2)
+            flipServo.write(SERVO_HOME_ANGLE);
+            // Immediately transition to FEEDING2 - don't wait for servo to return home
             currentState = S_FEEDING2;  // Go to second feeding
             stateStartTime = millis();
             currentStep = 1.0f;
