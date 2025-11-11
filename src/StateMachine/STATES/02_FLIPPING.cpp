@@ -3,8 +3,6 @@
 #include "Config/Config.h"
 #include "Config/Pins_Definitions.h"
 
-const float SERVO_PRE_HOME_ANGLE = 180.0f; // Servo angle before returning to home
-
 //* ************************************************************************
 //* *********************** FLIPPING STATE HANDLER **************************
 //* ************************************************************************
@@ -33,49 +31,13 @@ void handleFlippingState() {
     }
     
     //! ************************************************************************
-    //! STEP 2: WAIT FOR SERVO TO FINISH MOVING
+    //! STEP 2: WAIT FOR SERVO TO FINISH MOVING, THEN TRANSITION TO FEEDING2
     //! ************************************************************************
     else if (currentStep == 2.0f) {
         log_state_step("State: FLIPPING - Step 2: Waiting for servo to finish moving.");
         // Wait for the servo to get to the flip position
         if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached flip position.");
-            currentStep = 3.0f;
-        }
-    }
-    
-    //! ************************************************************************
-    //! STEP 3: MOVE SERVO TO PRE-HOME POSITION (110 DEGREES)
-    //! ************************************************************************
-    else if (currentStep == 3.0f) {
-        log_state_step("State: FLIPPING - Step 3: Moving servo to pre-home position (110 degrees).");
-        flipServo.write(SERVO_PRE_HOME_ANGLE);
-        stepStartTime = millis();
-        currentStep = 4.0f;
-    }
-
-    //! ************************************************************************
-    //! STEP 4: WAIT FOR SERVO TO REACH PRE-HOME POSITION AND EXTRA SETTLE TIME
-    //! ************************************************************************
-    else if (currentStep == 4.0f) {
-        log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach pre-home position.");
-        if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached pre-home position (180 degrees).");
-            stepStartTime = millis();
-            currentStep = 4.5f;
-        }
-    }
-
-    //! ************************************************************************
-    //! STEP 4.5: EXTRA WAIT FOR SERVO TO SETTLE AT PRE-HOME POSITION
-    //! ************************************************************************
-    else if (currentStep == 4.5f) {
-        log_state_step("State: FLIPPING - Step 4.5: Extra wait for servo to settle at pre-home position.");
-        if (millis() - stepStartTime >= 2000) {
-            Serial.println("                 - Servo settle time complete. Starting servo return to home and transitioning to FEEDING2.");
-            // Start servo returning home (happens in parallel with FEEDING2)
-            flipServo.write(SERVO_HOME_ANGLE);
-            // Immediately transition to FEEDING2 - don't wait for servo to return home
+            Serial.println("                 - Servo has reached flip position. Transitioning to FEEDING2 state.");
             currentState = S_FEEDING2;  // Go to second feeding
             stateStartTime = millis();
             currentStep = 1.0f;
