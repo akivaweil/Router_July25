@@ -4,7 +4,6 @@
 #include "Config/Pins_Definitions.h"
 
 const float SERVO_PRE_HOME_ANGLE = 180.0f; // Servo angle before returning to home
-const float SERVO_PRE_HOME_EXTRA_WAIT_MS = 1000.0f; // Extra wait time for servo to settle at pre-home
 
 //* ************************************************************************
 //* *********************** FLIPPING STATE HANDLER **************************
@@ -60,8 +59,7 @@ void handleFlippingState() {
     //! ************************************************************************
     else if (currentStep == 4.0f) {
         log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach pre-home position.");
-        float elapsedPreHomeWait = static_cast<float>(millis() - stepStartTime);
-        if (elapsedPreHomeWait >= SERVO_PRE_HOME_EXTRA_WAIT_MS && flipServo.hasReachedTarget()) {
+        if (flipServo.hasReachedTarget()) {
             Serial.println("                 - Servo has reached pre-home position (110 degrees).");
             currentStep = 5.0f;
         }

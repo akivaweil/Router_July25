@@ -3,6 +3,8 @@
 #include "Config/Config.h"
 #include "Config/Pins_Definitions.h"
 
+const float ROUTER_EXTRA_WAIT_MS = 2000.0f; // Additional router wait overlapping with second feed
+
 //* ************************************************************************
 //* ********************* SECOND FEEDING STATE HANDLER **********************
 //* ************************************************************************
@@ -23,7 +25,8 @@ void handleFeeding2State() {
     //! ************************************************************************
     else if (currentStep == 2.0f) {
         log_state_step("State: FEEDING2 - Step 2: Waiting for feed time to elapse.");
-        if (millis() - stepStartTime >= FEED_TIME) {
+        float elapsedFeedTime = static_cast<float>(millis() - stepStartTime);
+        if (elapsedFeedTime >= FEED_TIME && elapsedFeedTime >= ROUTER_EXTRA_WAIT_MS) {
             Serial.println("                 - Feed time elapsed. Extending cylinder to safe position.");
             Serial.println("                 - Machine cycle complete. Returning to IDLE state.");
             // Extend cylinder to safe position (LOW = extended/safe)
