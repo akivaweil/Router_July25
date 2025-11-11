@@ -3,6 +3,8 @@
 #include "Config/Config.h"
 #include "Config/Pins_Definitions.h"
 
+const float SERVO_PRE_HOME_ANGLE = 110.0f; // Servo angle before returning to home
+
 //* ************************************************************************
 //* *********************** FLIPPING STATE HANDLER **************************
 //* ************************************************************************
@@ -43,20 +45,41 @@ void handleFlippingState() {
     }
     
     //! ************************************************************************
-    //! STEP 3: MOVE SERVO BACK TO HOME POSITION
+    //! STEP 3: MOVE SERVO TO PRE-HOME POSITION (110 DEGREES)
     //! ************************************************************************
     else if (currentStep == 3.0f) {
-        log_state_step("State: FLIPPING - Step 3: Moving servo back to home position.");
-        flipServo.write(SERVO_HOME_ANGLE);
+        log_state_step("State: FLIPPING - Step 3: Moving servo to pre-home position (110 degrees).");
+        flipServo.write(SERVO_PRE_HOME_ANGLE);
         stepStartTime = millis();
         currentStep = 4.0f;
     }
 
     //! ************************************************************************
-    //! STEP 4: WAIT FOR SERVO TO RETURN HOME
+    //! STEP 4: WAIT FOR SERVO TO REACH PRE-HOME POSITION
     //! ************************************************************************
     else if (currentStep == 4.0f) {
-        log_state_step("State: FLIPPING - Step 4: Waiting for servo to return home.");
+        log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach pre-home position.");
+        if (flipServo.hasReachedTarget()) {
+            Serial.println("                 - Servo has reached pre-home position (110 degrees).");
+            currentStep = 5.0f;
+        }
+    }
+
+    //! ************************************************************************
+    //! STEP 5: MOVE SERVO BACK TO HOME POSITION
+    //! ************************************************************************
+    else if (currentStep == 5.0f) {
+        log_state_step("State: FLIPPING - Step 5: Moving servo back to home position.");
+        flipServo.write(SERVO_HOME_ANGLE);
+        stepStartTime = millis();
+        currentStep = 6.0f;
+    }
+
+    //! ************************************************************************
+    //! STEP 6: WAIT FOR SERVO TO RETURN HOME
+    //! ************************************************************************
+    else if (currentStep == 6.0f) {
+        log_state_step("State: FLIPPING - Step 6: Waiting for servo to return home.");
         if (flipServo.hasReachedTarget()) {
             Serial.println("                 - Servo has returned home. Transitioning to FEEDING2 state.");
             currentState = S_FEEDING2;  // Go to second feeding
