@@ -13,6 +13,7 @@ void handleFeeding2State() {
     if (currentStep == 1.0f) {
         log_state_step("State: FEEDING2 - Step 1: Starting second feed.");
         // Retract cylinder to push wood (HIGH = retracted/active)
+        delay(300);
         digitalWrite(FEED_CYLINDER_PIN, HIGH);
         stepStartTime = millis();
         currentStep = 2.0f;

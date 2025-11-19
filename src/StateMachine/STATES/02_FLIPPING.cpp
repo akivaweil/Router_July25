@@ -3,7 +3,7 @@
 #include "Config/Config.h"
 #include "Config/Pins_Definitions.h"
 
-const float SERVO_PRE_HOME_ANGLE = 180.0f; // Servo angle before returning to home
+const float SERVO_PRE_HOME_ANGLE = 130.0f; // Servo angle before returning to home
 
 //* ************************************************************************
 //* *********************** FLIPPING STATE HANDLER **************************
