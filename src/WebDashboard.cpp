@@ -130,7 +130,7 @@ void WebDashboard::sendStatusUpdate() {
         String json = "{";
         json += "\"type\":\"status\",";
         json += "\"homeAngle\":" + String(*homeAnglePtr, 1) + ",";
-        json += "\"boardEndMode\":" + String(*boardEndModePtr ? "true" : "false");
+        json += "\"boardEndMode\":\"" + String(*boardEndModePtr ? "true" : "false") + "\"";
         json += "}";
         webSocket->broadcastTXT(json);
     }
@@ -495,7 +495,7 @@ String WebDashboard::getDashboardHTML() {
                     const data = JSON.parse(event.data);
                     if (data.type === 'status') {
                         currentAngle = data.homeAngle;
-                        boardEndModeActive = data.boardEndMode === 'true';
+                        boardEndModeActive = (data.boardEndMode === true || data.boardEndMode === 'true' || data.boardEndMode === 1);
                         updateDisplay(currentAngle);
                         updateBoardEndModeDisplay();
                     }
