@@ -109,9 +109,9 @@ void WebDashboard::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
                 //! ************************************************************************
                 //! EXTRACT BOARD END MODE VALUE FROM JSON
                 //! ************************************************************************
-                int startIndex = message.indexOf("\"enabled\":") + 10;
+                int startIndex = message.indexOf("\"enabled\":") + 11;
                 int endIndex = message.indexOf("}", startIndex);
-                if (startIndex > 9 && endIndex > startIndex) {
+                if (startIndex > 10 && endIndex > startIndex) {
                     String enabledStr = message.substring(startIndex, endIndex);
                     bool enabled = (enabledStr == "true");
 
@@ -180,6 +180,7 @@ String WebDashboard::getDashboardHTML() {
             align-items: center;
             justify-content: center;
             color: #333;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .dashboard {
@@ -251,7 +252,8 @@ String WebDashboard::getDashboardHTML() {
             border-radius: 50%;
             background: linear-gradient(45deg, #667eea, #764ba2);
             cursor: pointer;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            box-shadow: none;
+            -webkit-tap-highlight-color: transparent;
         }
         
         .angle-slider::-moz-range-thumb {
