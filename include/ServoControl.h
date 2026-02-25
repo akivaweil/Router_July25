@@ -28,7 +28,6 @@ private:
 public:
     //! ********************** PUBLIC MEMBER VARIABLES *********************
     float targetAngle;          // Target angle for servo positioning
-    float startAngle;           // Starting angle of the current movement
     unsigned long lastUpdateTime; // Timestamp of last servo update
 
     //! ********************** CONSTRUCTOR **********************************

@@ -1,5 +1,5 @@
 #include "ServoControl.h"
-#include "config/Config.h" // Include config for SERVO_SPEED
+#include "config/Config.h" // Include config for SERVO_MOVE_DELAY
 
 //* ************************************************************************
 //* ********************** CONSTRUCTOR *************************************
@@ -17,7 +17,6 @@ ServoControl::ServoControl() {
     minAngle = 0;            // Minimum servo angle
     maxAngle = 180;          // Maximum servo angle
     targetAngle = 90.0f;     // Default to center position
-    startAngle = 90.0f;      // Default to center position
     lastUpdateTime = 0;      // Initialize timestamp
 }
 
@@ -74,7 +73,6 @@ void ServoControl::write(float angle) {
     if (channel >= 0) {
         int duty = angleToDuty(angle);
         ledcWrite(channel, duty);
-        startAngle = targetAngle;    // Store the start angle for time calculation
         targetAngle = angle;         // Store the target angle
         lastUpdateTime = millis();   // Record the time of update
     }
@@ -120,9 +118,7 @@ void ServoControl::setAngleRange(int minDeg, int maxDeg) {
 //* ************************************************************************
 bool ServoControl::hasReachedTarget() {
     //! ************************************************************************
-    //! CHECK IF ENOUGH TIME HAS PASSED BASED ON DISTANCE AND SPEED
+    //! CHECK IF ENOUGH TIME HAS PASSED SINCE LAST UPDATE
     //! ************************************************************************
-    float distance = abs(targetAngle - startAngle);
-    unsigned long timeNeeded = distance / SERVO_SPEED;
-    return millis() - lastUpdateTime >= timeNeeded;
+    return millis() - lastUpdateTime >= SERVO_MOVE_DELAY;
 } 
