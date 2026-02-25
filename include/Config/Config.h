@@ -7,8 +7,8 @@
 //! ********************** TIMING PARAMETERS (milliseconds) ****************
 const float FEEDING_START_DELAY_1 = 400.0f;  // Delay after start signal before first feeding begins
 const float FEEDING_START_DELAY_2 = 001.0f;  // Delay after start signal before second feeding begins
-const float FEED_TIME             = 2400.0f; // Duration the feed cylinder is active
-const float SERVO_MOVE_DELAY      = 600.0f; // Time allotted for the servo to complete its movement
+const float FEED_TIME             = 2500.0f; // Duration the feed cylinder is active
+const float SERVO_SPEED           = 0.15f;   // Degrees the servo moves per millisecond (approx 0.15 deg/ms = 150 deg/sec)
 
 //! ********************** SERVO ANGLES (degrees) ***************************
 extern float SERVO_HOME_ANGLE;  // The safe/home position for the servo (modifiable via dashboard)

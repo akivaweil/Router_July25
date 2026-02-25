@@ -10,6 +10,7 @@
 
 #include <Arduino.h>
 #include <Bounce2.h>
+#include <ESPmDNS.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
@@ -111,9 +112,9 @@ void setup() {
     //! SETUP INPUT DEBOUNCERS
     //! ************************************************************************
     startSensorDebouncer.attach(START_SENSOR_PIN);
-    startSensorDebouncer.interval(5); // 5ms debounce
+    startSensorDebouncer.interval(3); // 3ms debounce
     manualStartDebouncer.attach(MANUAL_START_PIN);
-    manualStartDebouncer.interval(30); // 30ms debounce
+    manualStartDebouncer.interval(3); // 3ms debounce
 
     //! ************************************************************************
     //! INITIALIZE FEED CYLINDER TO SAFE POSITION
@@ -134,11 +135,18 @@ void setup() {
         delay(1000);
     }
 
+    if (MDNS.begin("router")) {
+        MDNS.addService("http", "tcp", 80);
+    }
+
     //! ************************************************************************
     //! INITIALIZE WEB DASHBOARD
     //! ************************************************************************
     dashboard.init(&SERVO_HOME_ANGLE, &flipServo, &boardEndModeActive);
     dashboard.begin();
+
+    Serial.print("Dashboard: http://router.local or http://");
+    Serial.println(WiFi.localIP());
 
     //! ************************************************************************
     //! INITIALIZE OTA FUNCTIONALITY
