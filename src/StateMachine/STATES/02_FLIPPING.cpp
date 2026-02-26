@@ -1,8 +1,11 @@
 #include "StateMachine/STATES/02_FLIPPING.h"
 #include "StateMachine/StateMachine_Common.h"
-#include "Config/Config.h"
 #include "Config/Pins_Definitions.h"
 
+//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
+//║ ⚔️ FLIPPING CONFIG ║
+//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+const float FLIP_ANGLE = 0.0f;
 const float SERVO_PRE_HOME_ANGLE = 130.0f; // Servo angle before returning to home
 
 //* ************************************************************************

@@ -20,7 +20,6 @@
 #include "ServoControl.h"
 #include "WebDashboard.h"
 #include "config/Pins_Definitions.h"
-#include "config/Config.h"
 
 //* ************************************************************************
 //* ********************** FORWARD DECLARATIONS ****************************
@@ -52,6 +51,7 @@ Bounce manualStartDebouncer = Bounce();
 
 //! ********************** SERVO CONTROL ***********************************
 ServoControl flipServo;
+float SERVO_HOME_ANGLE = 90.0f;
 
 //! ********************** WEB DASHBOARD ***********************************
 WebDashboard dashboard;

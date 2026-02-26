@@ -26,6 +26,7 @@ extern Bounce manualStartDebouncer;
 
 //! ********************** SERVO CONTROL ***********************************
 extern ServoControl flipServo;
+extern float SERVO_HOME_ANGLE;
 
 //! ********************** STATE MACHINE VARIABLES *************************
 extern State currentState;

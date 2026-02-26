@@ -1,6 +1,5 @@
 #include "StateMachine/STATES/00_IDLE.h"
 #include "StateMachine/StateMachine_Common.h"
-#include "Config/Config.h"
 #include "Config/Pins_Definitions.h"
 
 //* ************************************************************************
