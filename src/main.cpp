@@ -99,13 +99,22 @@ void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
     RouterMessage msg;
     memcpy(&msg, data, sizeof(msg));
 
+    Serial.printf("[ESP-NOW] signal=%d  state=%d  timeSinceLast=%lums\n",
+                  msg.signal, (int)currentState, millis() - lastEspNowSignalTime);
+
     //! ************************************************************************
     //! DEDUPLICATE: ignore signal=1 repeats within 200ms window
     //! Stage 2 sends each message 3x rapid-fire (5ms apart) for redundancy
     //! ************************************************************************
     if (msg.signal == 1 && (millis() - lastEspNowSignalTime > ESPNOW_DEDUP_MS)) {
         lastEspNowSignalTime = millis();
-        espNowStartReceived = true;
+        //! Only trigger if we're actually in IDLE — discard pulses mid-cycle
+        if (currentState == S_IDLE) {
+            espNowStartReceived = true;
+            Serial.println("[ESP-NOW] Trigger accepted");
+        } else {
+            Serial.println("[ESP-NOW] Trigger ignored (not in IDLE)");
+        }
     }
 }
 
@@ -200,6 +209,7 @@ void setup() {
 
     Serial.print("Dashboard: http://router.local or http://");
     Serial.println(WiFi.localIP());
+    Serial.printf("WiFi channel: %d  (Stage 2 must match this)\n", WiFi.channel());
 
     //! ************************************************************************
     //! INITIALIZE OTA FUNCTIONALITY
