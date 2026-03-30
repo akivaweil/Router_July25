@@ -12,6 +12,7 @@
 #include <Bounce2.h>
 #include <ESPmDNS.h>
 #include <esp_now.h>
+#include <esp_wifi.h>
 #include <WiFi.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
@@ -72,6 +73,10 @@ float currentStep = 1.0f;
 
 //! ********************** ESP-NOW ******************************************
 volatile bool espNowStartReceived = false;
+unsigned long lastEspNowSignalTime = 0;
+
+// Ignore repeated signal=1 messages within this window (Stage 2 sends 3x rapid-fire)
+static const unsigned long ESPNOW_DEDUP_MS = 200;
 
 //* ************************************************************************
 //* ********************** HELPER FUNCTIONS ********************************
@@ -95,14 +100,21 @@ void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
     memcpy(&msg, data, sizeof(msg));
 
     //! ************************************************************************
-    //! TRIGGER ROUTING ON FIRST signal=1 FROM STAGE 2
+    //! DEDUPLICATE: ignore signal=1 repeats within 200ms window
+    //! Stage 2 sends each message 3x rapid-fire (5ms apart) for redundancy
     //! ************************************************************************
-    if (msg.signal == 1 && !espNowStartReceived) {
+    if (msg.signal == 1 && (millis() - lastEspNowSignalTime > ESPNOW_DEDUP_MS)) {
+        lastEspNowSignalTime = millis();
         espNowStartReceived = true;
     }
 }
 
 void initEspNow() {
+    //! ************************************************************************
+    //! SET MAX TX POWER FOR RELIABLE RECEPTION
+    //! ************************************************************************
+    esp_wifi_set_max_tx_power(84);
+
     //! ************************************************************************
     //! INIT ESP-NOW (WiFi must already be connected in STA mode)
     //! ************************************************************************
