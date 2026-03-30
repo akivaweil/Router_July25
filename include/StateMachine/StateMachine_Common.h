@@ -35,6 +35,9 @@ extern unsigned long stepStartTime;
 extern float currentStep;
 extern bool boardEndModeActive;
 
+//! ********************** ESP-NOW ******************************************
+extern volatile bool espNowStartReceived;
+
 //* ************************************************************************
 //* ********************** HELPER FUNCTIONS ********************************
 //* ************************************************************************

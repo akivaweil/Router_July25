@@ -11,6 +11,8 @@
 #include <Arduino.h>
 #include <Bounce2.h>
 #include <ESPmDNS.h>
+#include <esp_now.h>
+#include <WiFi.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
@@ -28,6 +30,7 @@ void initOTA();
 void handleOTA();
 void handleStateMachine();
 void log_state_step(const char* message);
+void initEspNow();
 
 //* ************************************************************************
 //* ********************** STATE ENUMERATION *******************************
@@ -67,6 +70,9 @@ unsigned long stateStartTime = 0;
 unsigned long stepStartTime = 0;
 float currentStep = 1.0f;
 
+//! ********************** ESP-NOW ******************************************
+volatile bool espNowStartReceived = false;
+
 //* ************************************************************************
 //* ********************** HELPER FUNCTIONS ********************************
 //* ************************************************************************
@@ -76,6 +82,36 @@ void log_state_step(const char* message) {
         lastLoggedState = currentState;
         lastLoggedStep = currentStep;
     }
+}
+
+//* ************************************************************************
+//* ********************** ESP-NOW RECEIVER ********************************
+//* ************************************************************************
+typedef struct { uint8_t signal; } RouterMessage;
+
+void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
+    if (len < 1) return;
+    RouterMessage msg;
+    memcpy(&msg, data, sizeof(msg));
+
+    //! ************************************************************************
+    //! TRIGGER ROUTING ON FIRST signal=1 FROM STAGE 2
+    //! ************************************************************************
+    if (msg.signal == 1 && !espNowStartReceived) {
+        espNowStartReceived = true;
+    }
+}
+
+void initEspNow() {
+    //! ************************************************************************
+    //! INIT ESP-NOW (WiFi must already be connected in STA mode)
+    //! ************************************************************************
+    if (esp_now_init() != ESP_OK) {
+        Serial.println("ESP-NOW init failed");
+        return;
+    }
+    esp_now_register_recv_cb(onEspNowReceive);
+    Serial.println("ESP-NOW receiver ready");
 }
 
 //* ************************************************************************
@@ -134,6 +170,11 @@ void setup() {
     while (WiFi.status() != WL_CONNECTED) {
         delay(1000);
     }
+
+    //! ************************************************************************
+    //! INITIALIZE ESP-NOW RECEIVER
+    //! ************************************************************************
+    initEspNow();
 
     if (MDNS.begin("router")) {
         MDNS.addService("http", "tcp", 80);

@@ -18,14 +18,15 @@ void handleIdleState() {
     }
 
     //! ************************************************************************
-    //! CHECK FOR START SIGNAL
+    //! CHECK FOR START SIGNAL (sensor, manual, or ESP-NOW from Stage 2)
     //! ************************************************************************
-    if (startSensorDebouncer.read() || manualStartDebouncer.read()) {
+    if (startSensorDebouncer.read() || manualStartDebouncer.read() || espNowStartReceived) {
         Serial.println("Start signal received! Transitioning to FEEDING state.");
-        currentState = S_FEEDING;  // Go to FEEDING state
+        espNowStartReceived = false;  // Clear ESP-NOW flag
+        currentState = S_FEEDING;
         stateStartTime = millis();
         currentStep = 1.0f;
-        servoHomed = false;  // Reset flag for next time we return to IDLE
+        servoHomed = false;
     }
 }
 
