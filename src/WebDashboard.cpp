@@ -158,7 +158,8 @@ void WebDashboard::loadHomeAngleFromEEPROM() {
 }
 
 String WebDashboard::getDashboardHTML() {
-    return R"rawliteral(
+    String macAddr = WiFi.macAddress();
+    String html = R"rawliteral(
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -414,12 +415,21 @@ String WebDashboard::getDashboardHTML() {
             margin-top: 10px;
             font-style: italic;
         }
+
+        .mac-address {
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 5px;
+            font-family: monospace;
+            letter-spacing: 0.05em;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard">
         <h1 class="title">Router Control</h1>
         <p class="subtitle">Home Angle Control Dashboard</p>
+        <p class="mac-address">MAC: )rawliteral" + macAddr + R"rawliteral(</p>
         
         <div class="control-group">
             <label class="control-label">Home Angle (degrees)</label>
@@ -628,6 +638,7 @@ String WebDashboard::getDashboardHTML() {
 </body>
 </html>
 )rawliteral";
+    return html;
 }
 
 //* ************************************************************************
