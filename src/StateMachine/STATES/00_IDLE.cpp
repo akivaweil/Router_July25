@@ -2,6 +2,9 @@
 #include "StateMachine/StateMachine_Common.h"
 #include "Config/Pins_Definitions.h"
 
+//! *** TEMP: cylinder pulse duration on ESP-NOW signal ***
+static const unsigned long ESPNOW_CYLINDER_PULSE_MS = 100;
+
 //* ************************************************************************
 //* ************************ IDLE STATE HANDLER ****************************
 //* ************************************************************************
@@ -18,11 +21,32 @@ void handleIdleState() {
     }
 
     //! ************************************************************************
-    //! CHECK FOR START SIGNAL (sensor, manual, or ESP-NOW from Stage 2)
+    //! TEMP: ESP-NOW FROM STAGE 2 → PULSE CYLINDER FOR 100ms, NO FULL CYCLE
     //! ************************************************************************
-    if (startSensorDebouncer.read() || manualStartDebouncer.read() || espNowStartReceived) {
+    static bool cylinderPulsing = false;
+    static unsigned long cylinderPulseStart = 0;
+
+    if (cylinderPulsing) {
+        if (millis() - cylinderPulseStart >= ESPNOW_CYLINDER_PULSE_MS) {
+            digitalWrite(FEED_CYLINDER_PIN, LOW); // retract back to safe
+            cylinderPulsing = false;
+        }
+        return;
+    }
+
+    if (espNowStartReceived) {
+        espNowStartReceived = false;
+        digitalWrite(FEED_CYLINDER_PIN, HIGH); // extend/push
+        cylinderPulseStart = millis();
+        cylinderPulsing = true;
+        return;
+    }
+
+    //! ************************************************************************
+    //! CHECK FOR START SIGNAL (sensor or manual → full cycle)
+    //! ************************************************************************
+    if (startSensorDebouncer.read() || manualStartDebouncer.read()) {
         Serial.println("Start signal received! Transitioning to FEEDING state.");
-        espNowStartReceived = false;  // Clear ESP-NOW flag
         currentState = S_FEEDING;
         stateStartTime = millis();
         currentStep = 1.0f;

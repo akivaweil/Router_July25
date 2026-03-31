@@ -41,8 +41,7 @@ enum State {
     S_IDLE,
     S_FEEDING,
     S_FLIPPING,
-    S_FEEDING2,
-    S_BOARD_END
+    S_FEEDING2
 };
 
 //* ************************************************************************
@@ -64,7 +63,6 @@ WebDashboard dashboard;
 State currentState = S_IDLE;
 State lastLoggedState = S_NONE;
 float lastLoggedStep = 0.0f;
-bool boardEndModeActive = false;
 
 //! ********************** TIMING VARIABLES ********************************
 unsigned long stateStartTime = 0;
@@ -142,7 +140,6 @@ void initEspNow() {
 #include "StateMachine/STATES/01_FEEDING.h"
 #include "StateMachine/STATES/02_FLIPPING.h"
 #include "StateMachine/STATES/03_FEEDING2.h"
-#include "StateMachine/STATES/04_BOARD_END.h"
 
 //* ************************************************************************
 //* **************************** SETUP *************************************
@@ -204,7 +201,7 @@ void setup() {
     //! ************************************************************************
     //! INITIALIZE WEB DASHBOARD
     //! ************************************************************************
-    dashboard.init(&SERVO_HOME_ANGLE, &flipServo, &boardEndModeActive);
+    dashboard.init(&SERVO_HOME_ANGLE, &flipServo);
     dashboard.begin();
 
     Serial.print("Dashboard: http://router.local or http://");
@@ -259,9 +256,6 @@ void handleStateMachine() {
             break;
         case S_FEEDING2:
             handleFeeding2State();
-            break;
-        case S_BOARD_END:
-            handleBoardEndState();
             break;
         default:
             // Handle unexpected state

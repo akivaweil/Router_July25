@@ -1,6 +1,5 @@
 #include "WebDashboard.h"
 #include "ServoControl.h"
-#include "StateMachine/StateMachine_Common.h"
 
 //* ************************************************************************
 //* ********************** CONSTRUCTOR *************************************
@@ -14,19 +13,17 @@ WebDashboard::WebDashboard() {
     isConnected = false;
     homeAnglePtr = nullptr;
     servoPtr = nullptr;
-    boardEndModePtr = nullptr;
 }
 
 //* ************************************************************************
 //* ********************** INITIALIZATION **********************************
 //* ************************************************************************
-void WebDashboard::init(float* homeAngle, void* servo, bool* boardEndMode) {
+void WebDashboard::init(float* homeAngle, void* servo) {
     //! ************************************************************************
     //! STORE POINTER TO HOME ANGLE VARIABLE AND SERVO OBJECT
     //! ************************************************************************
     homeAnglePtr = homeAngle;
     servoPtr = servo;
-    boardEndModePtr = boardEndMode;
     
     //! ************************************************************************
     //! INITIALIZE EEPROM
@@ -105,32 +102,15 @@ void WebDashboard::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
                     }
                 }
             }
-            else if (message.indexOf("\"command\":\"setBoardEndMode\"") >= 0) {
-                //! ************************************************************************
-                //! EXTRACT BOARD END MODE VALUE FROM JSON
-                //! ************************************************************************
-                int startIndex = message.indexOf("\"enabled\":") + 11;
-                int endIndex = message.indexOf("}", startIndex);
-                if (startIndex > 10 && endIndex > startIndex) {
-                    String enabledStr = message.substring(startIndex, endIndex);
-                    bool enabled = (enabledStr == "true");
-
-                    //! ************************************************************************
-                    //! SET BOARD END MODE
-                    //! ************************************************************************
-                    setBoardEndMode(enabled);
-                }
-            }
             break;
     }
 }
 
 void WebDashboard::sendStatusUpdate() {
-    if (isConnected && homeAnglePtr != nullptr && boardEndModePtr != nullptr) {
+    if (isConnected && homeAnglePtr != nullptr) {
         String json = "{";
         json += "\"type\":\"status\",";
-        json += "\"homeAngle\":" + String(*homeAnglePtr, 1) + ",";
-        json += "\"boardEndMode\":\"" + String(*boardEndModePtr ? "true" : "false") + "\"";
+        json += "\"homeAngle\":" + String(*homeAnglePtr, 1);
         json += "}";
         webSocket->broadcastTXT(json);
     }
@@ -455,20 +435,6 @@ String WebDashboard::getDashboardHTML() {
             </div>
         </div>
 
-        <div class="control-group">
-            <label class="control-label">Board End Mode</label>
-            <div class="mode-toggle">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="boardEndToggle">
-                    <span class="toggle-slider"></span>
-                </label>
-                <span class="toggle-label" id="boardEndLabel">Disabled</span>
-            </div>
-            <div class="mode-description">
-                When enabled, servo stays at home angle + 30° and skips rotation during cycles
-            </div>
-        </div>
-
         <div class="status disconnected" id="connectionStatus">
             Disconnected
         </div>
@@ -477,7 +443,6 @@ String WebDashboard::getDashboardHTML() {
     <script>
         let ws;
         let currentAngle = 90.0;
-        let boardEndModeActive = false;
         
         //! ************************************************************************
         //! INITIALIZE WEBSOCKET CONNECTION
@@ -505,9 +470,7 @@ String WebDashboard::getDashboardHTML() {
                     const data = JSON.parse(event.data);
                     if (data.type === 'status') {
                         currentAngle = data.homeAngle;
-                        boardEndModeActive = (data.boardEndMode === true || data.boardEndMode === 'true' || data.boardEndMode === 1);
                         updateDisplay(currentAngle);
-                        updateBoardEndModeDisplay();
                     }
                 } catch (e) {
                     console.error('Error parsing message:', e);
@@ -577,31 +540,6 @@ String WebDashboard::getDashboardHTML() {
         }
 
         //! ************************************************************************
-        //! UPDATE BOARD END MODE DISPLAY
-        //! ************************************************************************
-        function updateBoardEndModeDisplay() {
-            const toggle = document.getElementById('boardEndToggle');
-            const label = document.getElementById('boardEndLabel');
-
-            toggle.checked = boardEndModeActive;
-            label.textContent = boardEndModeActive ? 'Enabled' : 'Disabled';
-            label.style.color = boardEndModeActive ? '#667eea' : '#444';
-        }
-
-        //! ************************************************************************
-        //! SET BOARD END MODE
-        //! ************************************************************************
-        function setBoardEndMode(enabled) {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                const command = {
-                    command: 'setBoardEndMode',
-                    enabled: enabled
-                };
-                ws.send(JSON.stringify(command));
-            }
-        }
-        
-        //! ************************************************************************
         //! EVENT LISTENERS
         //! ************************************************************************
         document.getElementById('angleSlider').addEventListener('input', function() {
@@ -624,10 +562,6 @@ String WebDashboard::getDashboardHTML() {
             }
         });
 
-        document.getElementById('boardEndToggle').addEventListener('change', function() {
-            setBoardEndMode(this.checked);
-        });
-        
         //! ************************************************************************
         //! INITIALIZE ON PAGE LOAD
         //! ************************************************************************
@@ -655,32 +589,6 @@ void WebDashboard::setHomeAngle(float angle) {
         if (servoPtr != nullptr) {
             ServoControl* servo = static_cast<ServoControl*>(servoPtr);
             servo->write(angle);
-        }
-
-        sendStatusUpdate();
-    }
-}
-
-void WebDashboard::setBoardEndMode(bool enabled) {
-    if (boardEndModePtr != nullptr) {
-        *boardEndModePtr = enabled;
-
-        if (enabled) {
-            //! ************************************************************************
-            //! ACTIVATE BOARD END MODE - TRANSITION TO BOARD END STATE
-            //! ************************************************************************
-            Serial.println("Board end mode activated from dashboard.");
-            currentState = S_BOARD_END;
-            stateStartTime = millis();
-            currentStep = 1.0f;
-        } else {
-            //! ************************************************************************
-            //! DEACTIVATE BOARD END MODE - RETURN TO IDLE STATE
-            //! ************************************************************************
-            Serial.println("Board end mode deactivated from dashboard.");
-            currentState = S_IDLE;
-            stateStartTime = millis();
-            currentStep = 1.0f;
         }
 
         sendStatusUpdate();

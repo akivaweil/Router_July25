@@ -12,8 +12,7 @@ enum State {
     S_IDLE,
     S_FEEDING,
     S_FLIPPING,
-    S_FEEDING2,
-    S_BOARD_END
+    S_FEEDING2
 };
 
 //* ************************************************************************
@@ -33,7 +32,6 @@ extern State currentState;
 extern unsigned long stateStartTime;
 extern unsigned long stepStartTime;
 extern float currentStep;
-extern bool boardEndModeActive;
 
 //! ********************** ESP-NOW ******************************************
 extern volatile bool espNowStartReceived;
