@@ -60,7 +60,7 @@ float SERVO_HOME_ANGLE = 90.0f;
 WebDashboard dashboard;
 
 //! ********************** STATE MACHINE VARIABLES *************************
-State currentState = S_IDLE;
+volatile State currentState = S_IDLE;
 State lastLoggedState = S_NONE;
 float lastLoggedStep = 0.0f;
 
