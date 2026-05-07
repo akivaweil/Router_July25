@@ -225,6 +225,16 @@ void loop() {
     manualStartDebouncer.update();
 
     //! ************************************************************************
+    //! DRAIN START EDGES OUTSIDE IDLE — only IDLE should ever start a new cycle
+    //! (Bounce.rose() latches the edge until consumed; without this, an edge
+    //! during FEEDING/FLIPPING/FEEDING2 fires immediately on return to IDLE)
+    //! ************************************************************************
+    if (currentState != S_IDLE) {
+        startSensorDebouncer.rose();
+        manualStartDebouncer.rose();
+    }
+
+    //! ************************************************************************
     //! HANDLE OVER-THE-AIR UPDATES
     //! ************************************************************************
     handleOTA();
