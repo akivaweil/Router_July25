@@ -6,7 +6,7 @@
 //║ ⚔️ FEEDING2 CONFIG ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 const float FEEDING2_START_DELAY_MS = 1.0f;
-const float FEEDING2_DURATION_MS = 2300.0f;
+const float FEEDING2_DURATION_MS = 2500.0f;
 
 //* ************************************************************************
 //* ********************* SECOND FEEDING STATE HANDLER **********************
