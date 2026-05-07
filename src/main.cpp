@@ -235,9 +235,11 @@ void loop() {
     }
 
     //! ************************************************************************
-    //! HANDLE OVER-THE-AIR UPDATES
+    //! HANDLE OVER-THE-AIR UPDATES (only allowed while IDLE)
     //! ************************************************************************
-    handleOTA();
+    if (currentState == S_IDLE) {
+        handleOTA();
+    }
 
     //! ************************************************************************
     //! UPDATE WEB DASHBOARD
