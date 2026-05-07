@@ -7,6 +7,7 @@
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 const float FLIP_ANGLE = 0.0f;
 const float SERVO_PRE_HOME_ANGLE = 130.0f; // Servo angle before returning to home
+const float CYLINDER_RETRACT_AFTER_FLIP_DELAY_MS = 100.0f; // Delay after servo reaches flip before cylinder retracts
 
 //* ************************************************************************
 //* *********************** FLIPPING STATE HANDLER **************************
@@ -23,37 +24,33 @@ void handleFlippingState() {
     }
     
     //! ************************************************************************
-    //! STEP 2: WAIT FOR SERVO TO FINISH MOVING
+    //! STEP 2: WAIT FOR SERVO TO REACH FLIP POSITION
     //! ************************************************************************
     else if (currentStep == 2.0f) {
-        log_state_step("State: FLIPPING - Step 2: Waiting for servo to finish moving.");
-        // Wait for the servo to get to the flip position
+        log_state_step("State: FLIPPING - Step 2: Waiting for servo to reach flip position.");
         if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached flip position.");
+            Serial.println("                 - Servo has reached flip position. Starting cylinder retract delay.");
+            stepStartTime = millis();
             currentStep = 3.0f;
         }
     }
-    
-    //! ************************************************************************
-    //! STEP 3: MOVE SERVO TO PRE-HOME POSITION (110 DEGREES)
-    //! ************************************************************************
-    else if (currentStep == 3.0f) {
-        log_state_step("State: FLIPPING - Step 3: Moving servo to pre-home position (110 degrees).");
-        flipServo.write(SERVO_PRE_HOME_ANGLE);
-        stepStartTime = millis();
-        currentStep = 4.0f;
-    }
 
     //! ************************************************************************
-    //! STEP 4: WAIT FOR SERVO TO REACH PRE-HOME POSITION THEN TRANSITION
+    //! STEP 3: AFTER DELAY, RETRACT CYLINDER AND RETURN SERVO TO PRE-HOME (PARALLEL)
     //! ************************************************************************
-    else if (currentStep == 4.0f) {
-        log_state_step("State: FLIPPING - Step 4: Waiting for servo to reach pre-home position.");
-        if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached pre-home position. Transitioning to FEEDING2 state.");
-            currentState = S_FEEDING2;  // Go to second feeding
+    else if (currentStep == 3.0f) {
+        log_state_step("State: FLIPPING - Step 3: Waiting before retracting cylinder and returning servo.");
+        if (millis() - stepStartTime >= CYLINDER_RETRACT_AFTER_FLIP_DELAY_MS) {
+            Serial.println("                 - Retracting cylinder and returning servo to pre-home (parallel).");
+            // Retract cylinder to push wood (HIGH = retracted/active)
+            digitalWrite(FEED_CYLINDER_PIN, HIGH);
+            // Send servo back to pre-home in parallel with cylinder retraction
+            flipServo.write(SERVO_PRE_HOME_ANGLE);
+            Serial.println("                 - Transitioning to FEEDING2 state with cylinder already retracted.");
+            currentState = S_FEEDING2;
             stateStartTime = millis();
-            currentStep = 1.0f;
+            stepStartTime = millis();
+            currentStep = 2.0f;  // Skip FEEDING2 step 1 since cylinder is already retracted
         }
     }
 }
