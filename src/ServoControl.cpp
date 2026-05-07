@@ -3,7 +3,10 @@
 //╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
 //║ ⚔️ SERVO CONFIG ║
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
-const float SERVO_MOVE_DELAY = 1100.0f;
+// 5V 25kg digital servo. Empirically tuned with load — raise if cylinder
+// fires before servo lands; lower if it waits too long.
+const float SERVO_MS_PER_DEGREE = 12.0f;
+const unsigned long SERVO_MIN_MOVE_MS = 50; // floor for tiny moves / jitter
 
 //* ************************************************************************
 //* ********************** CONSTRUCTOR *************************************
@@ -21,7 +24,9 @@ ServoControl::ServoControl() {
     minAngle = 0;            // Minimum servo angle
     maxAngle = 180;          // Maximum servo angle
     targetAngle = 90.0f;     // Default to center position
+    currentAngle = 90.0f;    // Assume starting at center
     lastUpdateTime = 0;      // Initialize timestamp
+    moveDurationMs = 0;      // No move pending
 }
 
 //* ************************************************************************
@@ -77,6 +82,10 @@ void ServoControl::write(float angle) {
     if (channel >= 0) {
         int duty = angleToDuty(angle);
         ledcWrite(channel, duty);
+        float delta = fabs(angle - currentAngle);
+        unsigned long computed = (unsigned long)(delta * SERVO_MS_PER_DEGREE);
+        moveDurationMs = computed < SERVO_MIN_MOVE_MS ? SERVO_MIN_MOVE_MS : computed;
+        currentAngle = angle;
         targetAngle = angle;         // Store the target angle
         lastUpdateTime = millis();   // Record the time of update
     }
@@ -122,7 +131,8 @@ void ServoControl::setAngleRange(int minDeg, int maxDeg) {
 //* ************************************************************************
 bool ServoControl::hasReachedTarget() {
     //! ************************************************************************
-    //! CHECK IF ENOUGH TIME HAS PASSED SINCE LAST UPDATE
+    //! CHECK IF ENOUGH TIME HAS PASSED FOR THE COMMANDED MOVE TO COMPLETE
+    //! Duration scales with angle delta (SERVO_MS_PER_DEGREE).
     //! ************************************************************************
-    return millis() - lastUpdateTime >= SERVO_MOVE_DELAY;
+    return millis() - lastUpdateTime >= moveDurationMs;
 } 

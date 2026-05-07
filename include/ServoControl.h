@@ -28,7 +28,9 @@ private:
 public:
     //! ********************** PUBLIC MEMBER VARIABLES *********************
     float targetAngle;          // Target angle for servo positioning
+    float currentAngle;         // Last commanded angle (start of next move)
     unsigned long lastUpdateTime; // Timestamp of last servo update
+    unsigned long moveDurationMs; // Computed duration for the current move
 
     //! ********************** CONSTRUCTOR **********************************
     ServoControl();
