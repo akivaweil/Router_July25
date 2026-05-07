@@ -7,7 +7,7 @@
 //╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
 const float FLIP_ANGLE = 0.0f;
 const float SERVO_PRE_HOME_ANGLE = 130.0f; // Servo angle before returning to home
-const float CYLINDER_RETRACT_AFTER_FLIP_DELAY_MS = 100.0f; // Delay after servo reaches flip before cylinder retracts
+const float CYLINDER_RETRACT_AFTER_FLIP_DELAY_MS = 500.0f; // Delay after servo reaches flip before cylinder retracts
 
 //* ************************************************************************
 //* *********************** FLIPPING STATE HANDLER **************************
