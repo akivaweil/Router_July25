@@ -1,18 +1,15 @@
-#ifndef SERVO_CONTROL_H
-#define SERVO_CONTROL_H
+#pragma once
 
 #include <Arduino.h>
 
-//* ************************************************************************
-//* ********************** SERVO CONTROL CLASS *****************************
-//* ************************************************************************
-//! Custom servo control class for ESP32 using LEDC (LED Control) PWM
-//! Provides precise servo control with configurable parameters
-//! Supports both angle-based and microsecond-based positioning
+// Servo control class
+// Custom servo control class for ESP32 using LEDC (LED Control) PWM.
+// Provides precise servo control with configurable parameters.
+// Supports both angle-based and microsecond-based positioning.
 
 class ServoControl {
 private:
-    //! ********************** PRIVATE MEMBER VARIABLES *********************
+    // Private member variables
     int pin;                    // GPIO pin connected to servo
     int channel;                // LEDC channel for PWM generation
     int frequency;              // PWM frequency in Hz
@@ -21,34 +18,32 @@ private:
     int maxPulseWidth;          // Maximum pulse width in microseconds
     int minAngle;               // Minimum servo angle in degrees
     int maxAngle;               // Maximum servo angle in degrees
-    
-    //! ********************** PRIVATE METHODS ******************************
+
+    // Private methods
     int angleToDuty(float angle);  // Convert angle to PWM duty cycle
-    
+
 public:
-    //! ********************** PUBLIC MEMBER VARIABLES *********************
+    // Public member variables
     float targetAngle;          // Target angle for servo positioning
     float currentAngle;         // Last commanded angle (start of next move)
     unsigned long lastUpdateTime; // Timestamp of last servo update
     unsigned long moveDurationMs; // Computed duration for the current move
 
-    //! ********************** CONSTRUCTOR **********************************
+    // Constructor
     ServoControl();
-    
-    //! ********************** INITIALIZATION *******************************
+
+    // Initialization
     void init(int servoPin, int pwmChannel = 7, int freq = 50, int res = 14);
-    
-    //! ********************** SERVO CONTROL METHODS ************************
+
+    // Servo control methods
     void write(float angle);                    // Set servo to specific angle
     void writeMicroseconds(int microseconds);   // Set servo pulse width directly
     void detach();                              // Detach servo from pin
-    
-    //! ********************** CONFIGURATION METHODS ************************
+
+    // Configuration methods
     void setPulseWidthRange(int minUs, int maxUs);  // Set pulse width range
     void setAngleRange(int minDeg, int maxDeg);     // Set angle range
-    
-    //! ********************** STATUS METHODS *******************************
+
+    // Status methods
     bool hasReachedTarget();                    // Check if servo reached target
 };
-
-#endif // SERVO_CONTROL_H 

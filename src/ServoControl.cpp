@@ -6,13 +6,9 @@
 const float SERVO_MS_PER_DEGREE = 12.0f;
 const unsigned long SERVO_MIN_MOVE_MS = 50; // floor for tiny moves / jitter
 
-//* ************************************************************************
-//* ********************** CONSTRUCTOR *************************************
-//* ************************************************************************
+// Constructor
 ServoControl::ServoControl() {
-    //! ************************************************************************
-    //! INITIALIZE MEMBER VARIABLES TO DEFAULT VALUES
-    //! ************************************************************************
+    // Initialize member variables to default values
     pin = -1;
     channel = -1;
     frequency = 50;          // Standard servo frequency
@@ -27,56 +23,38 @@ ServoControl::ServoControl() {
     moveDurationMs = 0;      // No move pending
 }
 
-//* ************************************************************************
-//* ********************** INITIALIZATION **********************************
-//* ************************************************************************
+// Initialization
 void ServoControl::init(int servoPin, int pwmChannel, int freq, int res) {
-    //! ************************************************************************
-    //! STORE CONFIGURATION PARAMETERS
-    //! ************************************************************************
+    // Store configuration parameters
     pin = servoPin;
     channel = pwmChannel;
     frequency = freq;
     resolution = res;
-    
-    //! ************************************************************************
-    //! CONFIGURE LEDC PWM CHANNEL
-    //! ************************************************************************
+
+    // Configure LEDC PWM channel
     ledcSetup(channel, frequency, resolution);
     ledcAttachPin(pin, channel);
 }
 
-//* ************************************************************************
-//* ********************** PRIVATE METHODS **********************************
-//* ************************************************************************
+// Private methods
 int ServoControl::angleToDuty(float angle) {
-    //! ************************************************************************
-    //! CLAMP ANGLE TO VALID RANGE
-    //! ************************************************************************
+    // Clamp angle to valid range
     if (angle < minAngle) angle = minAngle;
     if (angle > maxAngle) angle = maxAngle;
-    
-    //! ************************************************************************
-    //! CONVERT ANGLE TO PULSE WIDTH
-    //! ************************************************************************
+
+    // Convert angle to pulse width
     float pulseWidth = map(angle, minAngle, maxAngle, minPulseWidth, maxPulseWidth);
-    
-    //! ************************************************************************
-    //! CONVERT PULSE WIDTH TO DUTY CYCLE
-    //! ************************************************************************
+
+    // Convert pulse width to duty cycle
     int maxDuty = (1 << resolution) - 1;
     int duty = (pulseWidth / (1000000.0 / frequency)) * maxDuty;
-    
+
     return duty;
 }
 
-//* ************************************************************************
-//* ********************** SERVO CONTROL METHODS ***************************
-//* ************************************************************************
+// Servo control methods
 void ServoControl::write(float angle) {
-    //! ************************************************************************
-    //! CHECK IF SERVO IS INITIALIZED
-    //! ************************************************************************
+    // Check if servo is initialized
     if (channel >= 0) {
         int duty = angleToDuty(angle);
         ledcWrite(channel, duty);
@@ -90,9 +68,7 @@ void ServoControl::write(float angle) {
 }
 
 void ServoControl::writeMicroseconds(int microseconds) {
-    //! ************************************************************************
-    //! CHECK IF SERVO IS INITIALIZED
-    //! ************************************************************************
+    // Check if servo is initialized
     if (channel >= 0) {
         int maxDuty = (1 << resolution) - 1;
         int duty = (microseconds / (1000000.0 / frequency)) * maxDuty;
@@ -102,18 +78,14 @@ void ServoControl::writeMicroseconds(int microseconds) {
 }
 
 void ServoControl::detach() {
-    //! ************************************************************************
-    //! DETACH SERVO FROM PIN AND RESET CHANNEL
-    //! ************************************************************************
+    // Detach servo from pin and reset channel
     if (channel >= 0) {
         ledcDetachPin(pin);
         channel = -1;
     }
 }
 
-//* ************************************************************************
-//* ********************** CONFIGURATION METHODS ***************************
-//* ************************************************************************
+// Configuration methods
 void ServoControl::setPulseWidthRange(int minUs, int maxUs) {
     minPulseWidth = minUs;
     maxPulseWidth = maxUs;
@@ -124,13 +96,9 @@ void ServoControl::setAngleRange(int minDeg, int maxDeg) {
     maxAngle = maxDeg;
 }
 
-//* ************************************************************************
-//* ********************** STATUS METHODS ***********************************
-//* ************************************************************************
+// Status methods
 bool ServoControl::hasReachedTarget() {
-    //! ************************************************************************
-    //! CHECK IF ENOUGH TIME HAS PASSED FOR THE COMMANDED MOVE TO COMPLETE
-    //! Duration scales with angle delta (SERVO_MS_PER_DEGREE).
-    //! ************************************************************************
+    // Check if enough time has passed for the commanded move to complete.
+    // Duration scales with angle delta (SERVO_MS_PER_DEGREE).
     return millis() - lastUpdateTime >= moveDurationMs;
-} 
+}

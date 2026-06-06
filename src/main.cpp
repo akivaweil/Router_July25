@@ -1,12 +1,10 @@
-//* ************************************************************************
-//* ******************** ESP32 ROUTER CONTROL SYSTEM *********************
-//* ************************************************************************
-//! This program controls a router machine that:
-//! 1. Waits for a start signal (IDLE)
-//! 2. Feeds wood through router (FEEDING)
-//! 3. Flips the wood over with a servo motor (FLIPPING)
-//! 4. Feeds wood again (FEEDING2)
-//! 5. Goes back to waiting (IDLE)
+// ESP32 Router control system
+// This program controls a router machine that:
+// 1. Waits for a start signal (IDLE)
+// 2. Feeds wood through router (FEEDING)
+// 3. Flips the wood over with a servo motor (FLIPPING)
+// 4. Feeds wood again (FEEDING2)
+// 5. Goes back to waiting (IDLE)
 
 #include <Arduino.h>
 #include <Bounce2.h>
@@ -17,70 +15,59 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
-//* ************************************************************************
-//* ********************** PROJECT FILES ***********************************
-//* ************************************************************************
+// Project files
 #include "ServoControl.h"
-#include "WebDashboard.h"
-#include "config/Pins_Definitions.h"
+#include "OTA/OTA_Upload.h"
+#include "WebDashboard/WebDashboard.h"
+#include "Config/Pins_Definitions.h"
 #include "ConfigApi/MachineConfigApi.h"
 #include "ConfigApi/MachineSettings.h"
 
-//* ************************************************************************
-//* ********************** FORWARD DECLARATIONS ****************************
-//* ************************************************************************
-void initOTA();
-void handleOTA();
+// Forward declarations
 void handleStateMachine();
 void log_state_step(const char* message);
 void initEspNow();
 
-//* ************************************************************************
-//* ********************** STATE ENUMERATION *******************************
-//* ************************************************************************
-enum State {
-    S_NONE,
-    S_IDLE,
-    S_FEEDING,
-    S_FLIPPING,
-    S_FEEDING2
+// State enumeration
+enum SystemState {
+    STATE_NONE,
+    STATE_IDLE,
+    STATE_FEEDING,
+    STATE_FLIPPING,
+    STATE_FEEDING2
 };
 
-//* ************************************************************************
-//* ********************** GLOBAL VARIABLES ********************************
-//* ************************************************************************
+// Global variables
 
-//! ********************** INPUT DEBOUNCERS ********************************
+// Input debouncers
 Bounce startSensorDebouncer = Bounce();
 Bounce manualStartDebouncer = Bounce();
 
-//! ********************** SERVO CONTROL ***********************************
+// Servo control
 ServoControl flipServo;
 float SERVO_HOME_ANGLE = 90.0f;
 
-//! ********************** WEB DASHBOARD ***********************************
+// Web dashboard
 WebDashboard dashboard;
 
-//! ********************** STATE MACHINE VARIABLES *************************
-volatile State currentState = S_IDLE;
-State lastLoggedState = S_NONE;
+// State machine variables
+volatile SystemState currentState = STATE_IDLE;
+SystemState lastLoggedState = STATE_NONE;
 float lastLoggedStep = 0.0f;
 
-//! ********************** TIMING VARIABLES ********************************
+// Timing variables
 unsigned long stateStartTime = 0;
 unsigned long stepStartTime = 0;
 float currentStep = 1.0f;
 
-//! ********************** ESP-NOW ******************************************
+// ESP-NOW
 volatile bool espNowStartReceived = false;
 unsigned long lastEspNowSignalTime = 0;
 
 // Ignore repeated signal=1 messages within this window (Stage 2 sends 3x rapid-fire)
 static const unsigned long ESPNOW_DEDUP_MS = 200;
 
-//* ************************************************************************
-//* ********************** HELPER FUNCTIONS ********************************
-//* ************************************************************************
+// Helper functions
 void log_state_step(const char* message) {
     if (currentState != lastLoggedState || currentStep != lastLoggedStep) {
         Serial.println(message);
@@ -89,9 +76,7 @@ void log_state_step(const char* message) {
     }
 }
 
-//* ************************************************************************
-//* ********************** ESP-NOW RECEIVER ********************************
-//* ************************************************************************
+// ESP-NOW receiver
 typedef struct { uint8_t signal; } RouterMessage;
 
 void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
@@ -102,14 +87,12 @@ void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
     Serial.printf("[ESP-NOW] signal=%d  state=%d  timeSinceLast=%lums\n",
                   msg.signal, (int)currentState, millis() - lastEspNowSignalTime);
 
-    //! ************************************************************************
-    //! DEDUPLICATE: ignore signal=1 repeats within 200ms window
-    //! Stage 2 sends each message 3x rapid-fire (5ms apart) for redundancy
-    //! ************************************************************************
+    // Deduplicate: ignore signal=1 repeats within 200ms window.
+    // Stage 2 sends each message 3x rapid-fire (5ms apart) for redundancy.
     if (msg.signal == 1 && (millis() - lastEspNowSignalTime > ESPNOW_DEDUP_MS)) {
         lastEspNowSignalTime = millis();
-        //! Only trigger if we're actually in IDLE — discard pulses mid-cycle
-        if (currentState == S_IDLE) {
+        // Only trigger if we're actually in IDLE — discard pulses mid-cycle
+        if (currentState == STATE_IDLE) {
             espNowStartReceived = true;
             Serial.println("[ESP-NOW] Trigger accepted");
         } else {
@@ -119,14 +102,10 @@ void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
 }
 
 void initEspNow() {
-    //! ************************************************************************
-    //! SET MAX TX POWER FOR RELIABLE RECEPTION
-    //! ************************************************************************
+    // Set max TX power for reliable reception
     esp_wifi_set_max_tx_power(84);
 
-    //! ************************************************************************
-    //! INIT ESP-NOW (WiFi must already be connected in STA mode)
-    //! ************************************************************************
+    // Init ESP-NOW (WiFi must already be connected in STA mode)
     if (esp_now_init() != ESP_OK) {
         Serial.println("ESP-NOW init failed");
         return;
@@ -135,163 +114,127 @@ void initEspNow() {
     Serial.println("ESP-NOW receiver ready");
 }
 
-//* ************************************************************************
-//* ********************** STATE MACHINE FILES *****************************
-//* ************************************************************************
+// State machine files
 #include "StateMachine/STATES/00_IDLE.h"
 #include "StateMachine/STATES/01_FEEDING.h"
 #include "StateMachine/STATES/02_FLIPPING.h"
 #include "StateMachine/STATES/03_FEEDING2.h"
 
-//* ************************************************************************
-//* **************************** SETUP *************************************
-//* ************************************************************************
+// Setup
 void setup() {
-    //! ************************************************************************
-    //! INITIALIZE SERIAL COMMUNICATION
-    //! ************************************************************************
+    // Initialize serial communication
     Serial.begin(115200);
-    
-    //! ************************************************************************
-    //! DISABLE BROWNOUT DETECTOR
-    //! ************************************************************************
+
+    // Disable brownout detector
     WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
 
-    //! ************************************************************************
-    //! CONFIGURE INPUT PINS
-    //! ************************************************************************
+    // Configure input pins
     pinMode(START_SENSOR_PIN, INPUT_PULLDOWN);
     pinMode(MANUAL_START_PIN, INPUT_PULLDOWN);
     pinMode(FEED_CYLINDER_PIN, OUTPUT);
 
-    //! ************************************************************************
-    //! SETUP INPUT DEBOUNCERS
-    //! ************************************************************************
+    // Setup input debouncers
     startSensorDebouncer.attach(START_SENSOR_PIN);
     startSensorDebouncer.interval(3); // 3ms debounce
     manualStartDebouncer.attach(MANUAL_START_PIN);
     manualStartDebouncer.interval(3); // 3ms debounce
 
-    //! ************************************************************************
-    //! INITIALIZE FEED CYLINDER TO SAFE POSITION
-    //! ************************************************************************
+    // Initialize feed cylinder to safe position
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe position
 
-    //! ************************************************************************
-    //! CONFIGURE SERVO MOTOR
-    //! ************************************************************************
+    // Configure servo motor
     flipServo.init(FLIP_SERVO_PIN, 0, 50, 14); // pin, channel, frequency, resolution
     flipServo.write(SERVO_HOME_ANGLE);
 
-    //! ************************************************************************
-    //! CONNECT TO WIFI
-    //! ************************************************************************
+    // Connect to WiFi
+    // Bounded connect attempt, then proceed so the machine still boots and runs
+    // its flip/feed cycle on locally-saved EEPROM settings if the network/TA is
+    // down. WiFi keeps retrying in the background after the loop falls through.
+    const uint32_t WIFI_CONNECT_TIMEOUT_MS = 15000;
+    const uint32_t WIFI_CONNECT_POLL_MS = 250;
     WiFi.begin("Everwood", "Everwood-Staff");
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(1000);
+    WiFi.setAutoReconnect(true);
+    uint32_t wifiConnectStart = millis();
+    while (WiFi.status() != WL_CONNECTED &&
+           millis() - wifiConnectStart < WIFI_CONNECT_TIMEOUT_MS) {
+        delay(WIFI_CONNECT_POLL_MS);
     }
 
-    //! ************************************************************************
-    //! INITIALIZE ESP-NOW RECEIVER
-    //! ************************************************************************
+    // Initialize ESP-NOW receiver
     initEspNow();
 
     if (MDNS.begin("router")) {
         MDNS.addService("http", "tcp", 80);
     }
 
-    //! ************************************************************************
-    //! INITIALIZE WEB DASHBOARD
-    //! ************************************************************************
+    // Initialize web dashboard
     dashboard.init(&SERVO_HOME_ANGLE, &flipServo);
 
-    //! ************************************************************************
-    //! LOAD PERSISTED MACHINE SETTINGS (3 new settings, EEPROM addr 4+)
-    //! EEPROM is already begun by dashboard.init(); SERVO_HOME_ANGLE (addr 0)
-    //! was loaded there. Seeds defaults on first boot.
-    //! ************************************************************************
+    // Load persisted machine settings (3 new settings, EEPROM addr 4+).
+    // EEPROM is already begun by dashboard.init(); SERVO_HOME_ANGLE (addr 0)
+    // was loaded there. Seeds defaults on first boot.
     loadSettings();
 
     dashboard.begin();
 
-    //! ************************************************************************
-    //! REGISTER SHARED CONFIG + STATUS API ON THE PORT-80 ASYNC SERVER
-    //! ************************************************************************
+    // Register shared config + status API on the port-80 async server
     setupConfigApi(*dashboard.getServer());
 
     Serial.print("Dashboard: http://router.local or http://");
     Serial.println(WiFi.localIP());
     Serial.printf("WiFi channel: %d  (Stage 2 must match this)\n", WiFi.channel());
 
-    //! ************************************************************************
-    //! INITIALIZE OTA FUNCTIONALITY
-    //! ************************************************************************
-    initOTA();
+    // Initialize OTA functionality
+    setupOTA();
 }
 
-//* ************************************************************************
-//* ***************************** LOOP *************************************
-//* ************************************************************************
+// Loop
 void loop() {
-    //! ************************************************************************
-    //! UPDATE INPUT DEBOUNCERS
-    //! ************************************************************************
+    // Update input debouncers
     startSensorDebouncer.update();
     manualStartDebouncer.update();
 
-    //! ************************************************************************
-    //! DRAIN START EDGES OUTSIDE IDLE — only IDLE should ever start a new cycle
-    //! (Bounce.rose() latches the edge until consumed; without this, an edge
-    //! during FEEDING/FLIPPING/FEEDING2 fires immediately on return to IDLE)
-    //! ************************************************************************
-    if (currentState != S_IDLE) {
+    // Drain start edges outside IDLE — only IDLE should ever start a new cycle.
+    // (Bounce.rose() latches the edge until consumed; without this, an edge
+    // during FEEDING/FLIPPING/FEEDING2 fires immediately on return to IDLE.)
+    if (currentState != STATE_IDLE) {
         startSensorDebouncer.rose();
         manualStartDebouncer.rose();
     }
 
-    //! ************************************************************************
-    //! HANDLE OVER-THE-AIR UPDATES (only allowed while IDLE)
-    //! ************************************************************************
-    if (currentState == S_IDLE) {
+    // Handle over-the-air updates (only allowed while IDLE)
+    if (currentState == STATE_IDLE) {
         handleOTA();
 
-        //! ********************************************************************
-        //! APPLY ANY CONFIG CHANGES DEFERRED MID-CYCLE (now back in IDLE)
-        //! ********************************************************************
+        // Apply any config changes deferred mid-cycle (now back in IDLE)
         applyPendingConfigIfIdle();
     }
 
-    //! ************************************************************************
-    //! UPDATE WEB DASHBOARD
-    //! ************************************************************************
+    // Update web dashboard
     dashboard.update();
 
-    //! ************************************************************************
-    //! RUN STATE MACHINE
-    //! ************************************************************************
+    // Run state machine
     handleStateMachine();
 }
 
-//* ************************************************************************
-//* ********************** STATE MACHINE HANDLER ***************************
-//* ************************************************************************
+// State machine handler
 void handleStateMachine() {
     switch (currentState) {
-        case S_IDLE:
+        case STATE_IDLE:
             handleIdleState();
             break;
-        case S_FEEDING:
+        case STATE_FEEDING:
             handleFeedingState();
             break;
-        case S_FLIPPING:
+        case STATE_FLIPPING:
             handleFlippingState();
             break;
-        case S_FEEDING2:
+        case STATE_FEEDING2:
             handleFeeding2State();
             break;
         default:
             // Handle unexpected state
-            currentState = S_IDLE;
+            currentState = STATE_IDLE;
             currentStep = 1.0f;
             break;
     }

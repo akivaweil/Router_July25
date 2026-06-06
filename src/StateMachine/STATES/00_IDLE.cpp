@@ -1,5 +1,5 @@
 #include "StateMachine/STATES/00_IDLE.h"
-#include "StateMachine/StateMachine_Common.h"
+#include "StateMachine/StateMachine.h"
 #include "Config/Pins_Definitions.h"
 
 // IDLE CONFIG
@@ -8,15 +8,11 @@ float ESPNOW_KICKOFF_OFFSET = 15.0f; // Kickoff nudges servo this many degrees a
 const unsigned long KICKOFF_PRE_DELAY_MS = 50;   // Wait this long after start signal before nudging servo up
 const unsigned long ESPNOW_KICKOFF_DELAY_MS = 300;
 
-//* ************************************************************************
-//* ************************ IDLE STATE HANDLER ****************************
-//* ************************************************************************
+// Idle state handler
 void handleIdleState() {
     log_state_step("State: IDLE - Waiting for start signal...");
 
-    //! ************************************************************************
-    //! ENSURE SERVO IS IN IDLE POSITION (DASHBOARD HOME - OFFSET)
-    //! ************************************************************************
+    // Ensure servo is in idle position (dashboard home - offset)
     static bool servoHomed = false;
     static bool preKickoffPending = false;
     static bool kickoffPending = false;
@@ -27,9 +23,7 @@ void handleIdleState() {
         servoHomed = true;
     }
 
-    //! ************************************************************************
-    //! PRE-KICKOFF: WAIT 50ms BEFORE NUDGING SERVO UP
-    //! ************************************************************************
+    // Pre-kickoff: wait 50ms before nudging servo up
     if (preKickoffPending) {
         // Drain any latched start edges so repeat pulses during kickoff don't queue another cycle
         startSensorDebouncer.rose();
@@ -45,9 +39,7 @@ void handleIdleState() {
         return;
     }
 
-    //! ************************************************************************
-    //! KICKOFF: WAIT 300ms AFTER NUDGE, THEN START CYCLE
-    //! ************************************************************************
+    // Kickoff: wait 300ms after nudge, then start cycle
     if (kickoffPending) {
         // Drain any latched start edges so repeat pulses during kickoff don't queue another cycle
         startSensorDebouncer.rose();
@@ -56,7 +48,7 @@ void handleIdleState() {
         if (millis() - kickoffStartTime >= ESPNOW_KICKOFF_DELAY_MS) {
             Serial.println("Kickoff complete. Transitioning to FEEDING state.");
             kickoffPending = false;
-            currentState = S_FEEDING;
+            currentState = STATE_FEEDING;
             stateStartTime = millis();
             currentStep = 1.0f;
             servoHomed = false;
@@ -64,9 +56,7 @@ void handleIdleState() {
         return;
     }
 
-    //! ************************************************************************
-    //! ANY START SIGNAL → PRE-KICKOFF + KICKOFF + FULL CYCLE (edge-triggered for sensor/manual)
-    //! ************************************************************************
+    // Any start signal -> pre-kickoff + kickoff + full cycle (edge-triggered for sensor/manual)
     if (espNowStartReceived || startSensorDebouncer.rose() || manualStartDebouncer.rose()) {
         espNowStartReceived = false;
         Serial.println("Start signal received. Waiting pre-kickoff delay.");
@@ -74,4 +64,3 @@ void handleIdleState() {
         preKickoffPending = true;
     }
 }
-

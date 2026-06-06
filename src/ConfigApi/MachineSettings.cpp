@@ -1,40 +1,41 @@
-#include "MachineSettings.h"
+#include "ConfigApi/MachineSettings.h"
+
+#include <Arduino.h>
 #include <EEPROM.h>
-#include "StateMachine/StateMachine_Common.h"
 
-//* ************************************************************************
-//* ********************** MACHINE SETTINGS (PERSISTENCE) ******************
-//* ************************************************************************
-//! Persists the 3 NEW runtime-tunable settings in a versioned struct at
-//! EEPROM addr 4, plus a mirror of SERVO_HOME_ANGLE at addr 0 (shared with
-//! WebDashboard). The in-RAM copies here are the STAGING area: values are
-//! staged here first and only copied into the live globals by
-//! applySettings() (boot + next-IDLE deferred apply).
+#include "StateMachine/StateMachine.h"
 
-//! ********************** IN-RAM STAGING SNAPSHOT ************************
+// Machine settings (persistence)
+// Persists the 3 NEW runtime-tunable settings in a versioned struct at
+// EEPROM addr 4, plus a mirror of SERVO_HOME_ANGLE at addr 0 (shared with
+// WebDashboard). The in-RAM copies here are the STAGING area: values are
+// staged here first and only copied into the live globals by
+// applySettings() (boot + next-IDLE deferred apply).
+
+// In-RAM staging snapshot
 static MachineSettings g_settings;
 static float g_stagedServoHomeAngle = 0.0f; // mirror of addr-0 SERVO_HOME_ANGLE
 
-//! ********************** APPLY: STRUCT -> LIVE GLOBALS *******************
-//! Copies the staged struct into the live globals. SERVO_HOME_ANGLE is NOT
-//! touched here: moving the servo is the "apply live" action and is driven
-//! by the config API via the dashboard, not by this copy.
+// Apply: struct -> live globals
+// Copies the staged struct into the live globals. SERVO_HOME_ANGLE is NOT
+// touched here: moving the servo is the "apply live" action and is driven
+// by the config API via the dashboard, not by this copy.
 void applySettings() {
     IDLE_HOME_OFFSET      = g_settings.idleHomeOffset;
     ESPNOW_KICKOFF_OFFSET = g_settings.espnowKickoffOffset;
     FEEDING_DURATION_MS   = g_settings.feedingDurationMs;
 }
 
-//! ********************** SAVE: STAGED STRUCT -> EEPROM *******************
-//! Flushes the STAGED struct to addr 4. Does NOT read the live globals, so
-//! it is safe to call on the deferred path (no live mutation implied).
+// Save: staged struct -> EEPROM
+// Flushes the STAGED struct to addr 4. Does NOT read the live globals, so
+// it is safe to call on the deferred path (no live mutation implied).
 void saveSettings() {
     g_settings.magic = MACHINE_SETTINGS_MAGIC;
     EEPROM.put(MACHINE_SETTINGS_ADDR, g_settings);
     EEPROM.commit();
 }
 
-//! ********************** LOAD: EEPROM -> STAGED -> GLOBALS ***************
+// Load: EEPROM -> staged -> globals
 void loadSettings() {
     // NOTE: EEPROM.begin() is already called by WebDashboard::init(), which
     // also restores SERVO_HOME_ANGLE from addr 0 into its live global.
@@ -44,9 +45,9 @@ void loadSettings() {
     EEPROM.get(MACHINE_SETTINGS_ADDR, g_settings);
 
     if (g_settings.magic != MACHINE_SETTINGS_MAGIC) {
-        //! ********************** FIRST BOOT: SEED FROM DEFAULTS **********
-        //! The live globals still hold their compile-time defaults here, so
-        //! snapshot them into the staging struct and persist.
+        // First boot: seed from defaults
+        // The live globals still hold their compile-time defaults here, so
+        // snapshot them into the staging struct and persist.
         g_settings.magic               = MACHINE_SETTINGS_MAGIC;
         g_settings.idleHomeOffset      = IDLE_HOME_OFFSET;
         g_settings.espnowKickoffOffset = ESPNOW_KICKOFF_OFFSET;
@@ -56,13 +57,11 @@ void loadSettings() {
         return;
     }
 
-    //! ********************** VALID: PUSH INTO LIVE GLOBALS ***************
+    // Valid: push into live globals
     applySettings();
 }
 
-//* ************************************************************************
-//* ********************** STAGING (no live writes) ***********************
-//* ************************************************************************
+// Staging (no live writes)
 bool stageSettingByKey(const char* key, float value) {
     if (strcmp(key, "SERVO_HOME_ANGLE") == 0) {
         g_stagedServoHomeAngle = value;

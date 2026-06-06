@@ -1,13 +1,9 @@
-#include "WebDashboard.h"
+#include "WebDashboard/WebDashboard.h"
 #include "ServoControl.h"
 
-//* ************************************************************************
-//* ********************** CONSTRUCTOR *************************************
-//* ************************************************************************
+// Constructor
 WebDashboard::WebDashboard() {
-    //! ************************************************************************
-    //! INITIALIZE MEMBER VARIABLES TO DEFAULT VALUES
-    //! ************************************************************************
+    // Initialize member variables to default values
     server = nullptr;
     webSocket = nullptr;
     isConnected = false;
@@ -15,88 +11,64 @@ WebDashboard::WebDashboard() {
     servoPtr = nullptr;
 }
 
-//* ************************************************************************
-//* ********************** INITIALIZATION **********************************
-//* ************************************************************************
+// Initialization
 void WebDashboard::init(float* homeAngle, void* servo) {
-    //! ************************************************************************
-    //! STORE POINTER TO HOME ANGLE VARIABLE AND SERVO OBJECT
-    //! ************************************************************************
+    // Store pointer to home angle variable and servo object
     homeAnglePtr = homeAngle;
     servoPtr = servo;
-    
-    //! ************************************************************************
-    //! INITIALIZE EEPROM
-    //! ************************************************************************
+
+    // Initialize EEPROM
     EEPROM.begin(EEPROM_SIZE);
-    
-    //! ************************************************************************
-    //! LOAD SAVED HOME ANGLE FROM EEPROM
-    //! ************************************************************************
+
+    // Load saved home angle from EEPROM
     loadHomeAngleFromEEPROM();
-    
-    //! ************************************************************************
-    //! CREATE WEB SERVER AND WEBSOCKET SERVER
-    //! ************************************************************************
+
+    // Create web server and websocket server
     server = new AsyncWebServer(80);
     webSocket = new WebSocketsServer(81);
-    
-    //! ************************************************************************
-    //! SETUP WEBSOCKET EVENT HANDLER
-    //! ************************************************************************
+
+    // Setup websocket event handler
     webSocket->onEvent([this](uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
         this->handleWebSocketEvent(num, type, payload, length);
     });
 }
 
 void WebDashboard::begin() {
-    //! ************************************************************************
-    //! SETUP WEB SERVER ROUTES
-    //! ************************************************************************
+    // Setup web server routes
     server->on("/", HTTP_GET, [this](AsyncWebServerRequest *request) {
         request->send(200, "text/html", getDashboardHTML());
     });
-    
-    //! ************************************************************************
-    //! START SERVERS
-    //! ************************************************************************
+
+    // Start servers
     server->begin();
     webSocket->begin();
 }
 
-//* ************************************************************************
-//* ********************** PRIVATE METHODS **********************************
-//* ************************************************************************
+// Private methods
 void WebDashboard::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
     switch (type) {
         case WStype_DISCONNECTED:
             isConnected = false;
             break;
-            
+
         case WStype_CONNECTED:
             isConnected = true;
             sendStatusUpdate();
             break;
-            
+
         case WStype_TEXT:
-            //! ************************************************************************
-            //! PARSE INCOMING JSON COMMANDS
-            //! ************************************************************************
+            // Parse incoming JSON commands
             String message = String((char*)payload);
-            
+
             if (message.indexOf("\"command\":\"setHomeAngle\"") >= 0) {
-                //! ************************************************************************
-                //! EXTRACT ANGLE VALUE FROM JSON
-                //! ************************************************************************
+                // Extract angle value from JSON
                 int startIndex = message.indexOf("\"angle\":") + 8;
                 int endIndex = message.indexOf("}", startIndex);
                 if (startIndex > 7 && endIndex > startIndex) {
                     String angleStr = message.substring(startIndex, endIndex);
                     float newAngle = angleStr.toFloat();
 
-                    //! ************************************************************************
-                    //! VALIDATE ANGLE RANGE (0-180 degrees)
-                    //! ************************************************************************
+                    // Validate angle range (0-180 degrees)
                     if (newAngle >= 0.0f && newAngle <= 180.0f) {
                         setHomeAngle(newAngle);
                     }
@@ -127,10 +99,8 @@ void WebDashboard::loadHomeAngleFromEEPROM() {
     if (homeAnglePtr != nullptr) {
         float savedAngle;
         EEPROM.get(HOME_ANGLE_ADDR, savedAngle);
-        
-        //! ************************************************************************
-        //! VALIDATE LOADED VALUE (check for uninitialized EEPROM)
-        //! ************************************************************************
+
+        // Validate loaded value (check for uninitialized EEPROM)
         if (savedAngle >= 0.0f && savedAngle <= 180.0f) {
             *homeAnglePtr = savedAngle;
         }
@@ -444,9 +414,7 @@ String WebDashboard::getDashboardHTML() {
         let ws;
         let currentAngle = 90.0;
         
-        //! ************************************************************************
-        //! INITIALIZE WEBSOCKET CONNECTION
-        //! ************************************************************************
+        // Initialize websocket connection
         function initWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = protocol + '//' + window.location.hostname + ':81';
@@ -459,9 +427,7 @@ String WebDashboard::getDashboardHTML() {
             
             ws.onclose = function() {
                 updateConnectionStatus(false);
-                //! ************************************************************************
-                //! RECONNECT AFTER 3 SECONDS
-                //! ************************************************************************
+                // Reconnect after 3 seconds
                 setTimeout(initWebSocket, 3000);
             };
             
@@ -482,9 +448,7 @@ String WebDashboard::getDashboardHTML() {
             };
         }
         
-        //! ************************************************************************
-        //! UPDATE CONNECTION STATUS DISPLAY
-        //! ************************************************************************
+        // Update connection status display
         function updateConnectionStatus(connected) {
             const status = document.getElementById('connectionStatus');
             if (connected) {
@@ -496,18 +460,14 @@ String WebDashboard::getDashboardHTML() {
             }
         }
         
-        //! ************************************************************************
-        //! UPDATE ANGLE DISPLAY
-        //! ************************************************************************
+        // Update angle display
         function updateDisplay(angle) {
             document.getElementById('angleDisplay').textContent = angle.toFixed(1) + '°';
             document.getElementById('angleSlider').value = angle;
             document.getElementById('angleInput').value = angle;
         }
         
-        //! ************************************************************************
-        //! SET ANGLE FROM INPUT OR SLIDER
-        //! ************************************************************************
+        // Set angle from input or slider
         function setAngle() {
             const input = document.getElementById('angleInput');
             const angle = parseFloat(input.value);
@@ -519,16 +479,12 @@ String WebDashboard::getDashboardHTML() {
             }
         }
         
-        //! ************************************************************************
-        //! SET PRESET ANGLE
-        //! ************************************************************************
+        // Set preset angle
         function setPresetAngle(angle) {
             sendAngleCommand(angle);
         }
         
-        //! ************************************************************************
-        //! SEND ANGLE COMMAND TO ESP32
-        //! ************************************************************************
+        // Send angle command to ESP32
         function sendAngleCommand(angle) {
             if (ws && ws.readyState === WebSocket.OPEN) {
                 const command = {
@@ -539,9 +495,7 @@ String WebDashboard::getDashboardHTML() {
             }
         }
 
-        //! ************************************************************************
-        //! EVENT LISTENERS
-        //! ************************************************************************
+        // Event listeners
         document.getElementById('angleSlider').addEventListener('input', function() {
             const angle = parseFloat(this.value);
             document.getElementById('angleInput').value = angle;
@@ -562,9 +516,7 @@ String WebDashboard::getDashboardHTML() {
             }
         });
 
-        //! ************************************************************************
-        //! INITIALIZE ON PAGE LOAD
-        //! ************************************************************************
+        // Initialize on page load
         window.addEventListener('load', function() {
             initWebSocket();
         });
@@ -575,17 +527,13 @@ String WebDashboard::getDashboardHTML() {
     return html;
 }
 
-//* ************************************************************************
-//* ********************** CONTROL METHODS **********************************
-//* ************************************************************************
+// Control methods
 void WebDashboard::setHomeAngle(float angle) {
     if (homeAnglePtr != nullptr && angle >= 0.0f && angle <= 180.0f) {
         *homeAnglePtr = angle;
         saveHomeAngleToEEPROM();
 
-        //! ************************************************************************
-        //! IMMEDIATELY MOVE SERVO TO NEW ANGLE
-        //! ************************************************************************
+        // Immediately move servo to new angle
         if (servoPtr != nullptr) {
             ServoControl* servo = static_cast<ServoControl*>(servoPtr);
             servo->write(angle);
@@ -601,9 +549,7 @@ void WebDashboard::update() {
     }
 }
 
-//* ************************************************************************
-//* ********************** STATUS METHODS ***********************************
-//* ************************************************************************
+// Status methods
 bool WebDashboard::isClientConnected() {
     return isConnected;
 }

@@ -1,43 +1,41 @@
-#include "MachineConfigApi.h"
-#include "MachineSettings.h"
+#include "ConfigApi/MachineConfigApi.h"
+
+#include <Arduino.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
 
-#include "StateMachine/StateMachine_Common.h"
-#include "WebDashboard.h"
+#include "ConfigApi/MachineSettings.h"
+#include "StateMachine/StateMachine.h"
+#include "WebDashboard/WebDashboard.h"
 #include "Config/Pins_Definitions.h"
 
-//* ************************************************************************
-//* ********************** SHARED MACHINE CONFIG API ***********************
-//* ************************************************************************
-//! See docs/DASHBOARD_API_CONTRACT.md. All /api/* responses carry the
-//! Access-Control-Allow-Origin: * header. POST /api/config arrives as a
-//! text/plain CORS simple request; the body is parsed as JSON regardless.
+// Shared machine config API
+// See docs/DASHBOARD_API_CONTRACT.md. All /api/* responses carry the
+// Access-Control-Allow-Origin: * header. POST /api/config arrives as a
+// text/plain CORS simple request; the body is parsed as JSON regardless.
 
-//! ********************** MACHINE IDENTITY ********************************
+// Machine identity
 static const char* MACHINE_ID   = "router";
 static const char* MACHINE_NAME = "Router";
 
-//! ********************** EXTERNAL GLOBALS ********************************
+// External globals
 extern WebDashboard dashboard;          // main.cpp (servo write + addr-0 persist)
 
-//! ********************** DEFERRED-APPLY FLAG *****************************
+// Deferred-apply flag
 volatile bool configDirty = false;
 
-//! ********************** DEFERRED SERVO-HOME FLAG ************************
-//! Set true ONLY when a deferred POST actually staged SERVO_HOME_ANGLE, so
-//! the next-IDLE apply moves the servo / commits addr 0 ONLY for POSTs that
-//! changed the home angle. Without this guard a deferred non-servo POST (e.g.
-//! FEEDING_DURATION_MS only) would, on the next IDLE, revert the servo to the
-//! stale staged angle and overwrite a websocket-set home angle at addr 0.
+// Deferred servo-home flag
+// Set true ONLY when a deferred POST actually staged SERVO_HOME_ANGLE, so
+// the next-IDLE apply moves the servo / commits addr 0 ONLY for POSTs that
+// changed the home angle. Without this guard a deferred non-servo POST (e.g.
+// FEEDING_DURATION_MS only) would, on the next IDLE, revert the servo to the
+// stale staged angle and overwrite a websocket-set home angle at addr 0.
 static volatile bool g_servoHomeStaged = false;
 
-//* ************************************************************************
-//* ********************** FIELD TABLE *************************************
-//* ************************************************************************
-//! The fields array IS the curated settings list for this machine and the
-//! single source of truth for keys, labels, ranges, and steps. type is
-//! "float" for all Router fields.
+// Field table
+// The fields array IS the curated settings list for this machine and the
+// single source of truth for keys, labels, ranges, and steps. type is
+// "float" for all Router fields.
 struct ConfigField {
     const char* key;
     const char* label;
@@ -63,27 +61,21 @@ static ConfigField* findField(const char* key) {
     return nullptr;
 }
 
-//* ************************************************************************
-//* ********************** STATE NAME HELPER *******************************
-//* ************************************************************************
+// State name helper
 static const char* stateName() {
-    return currentState == S_IDLE     ? "IDLE"
-         : currentState == S_FEEDING  ? "FEEDING"
-         : currentState == S_FLIPPING ? "FLIPPING"
-         : currentState == S_FEEDING2 ? "FEEDING2"
+    return currentState == STATE_IDLE     ? "IDLE"
+         : currentState == STATE_FEEDING  ? "FEEDING"
+         : currentState == STATE_FLIPPING ? "FLIPPING"
+         : currentState == STATE_FEEDING2 ? "FEEDING2"
          : "UNKNOWN";
 }
 
-//* ************************************************************************
-//* ********************** SAFETY GATE *************************************
-//* ************************************************************************
+// Safety gate
 bool isSafeToApplyConfig() {
-    return currentState == S_IDLE;
+    return currentState == STATE_IDLE;
 }
 
-//* ************************************************************************
-//* ********************** GET /api/status BODY ****************************
-//* ************************************************************************
+// GET /api/status body
 String buildStatusJson() {
     JsonDocument doc;
     doc["id"]       = MACHINE_ID;
@@ -106,9 +98,7 @@ String buildStatusJson() {
     return out;
 }
 
-//* ************************************************************************
-//* ********************** GET /api/config BODY ****************************
-//* ************************************************************************
+// GET /api/config body
 String buildConfigJson() {
     JsonDocument doc;
     doc["id"]     = MACHINE_ID;
@@ -131,20 +121,16 @@ String buildConfigJson() {
     return out;
 }
 
-//* ************************************************************************
-//* ********************** APPLY HELPERS **********************************
-//* ************************************************************************
-//! Apply SERVO_HOME_ANGLE live: write the live global, persist addr 0, and
-//! move the servo. dashboard.setHomeAngle() does all three (and pushes a
-//! websocket status update). Source of truth is the STAGED servo-home angle
-//! so we never read a half-written live global.
+// Apply helpers
+// Apply SERVO_HOME_ANGLE live: write the live global, persist addr 0, and
+// move the servo. dashboard.setHomeAngle() does all three (and pushes a
+// websocket status update). Source of truth is the STAGED servo-home angle
+// so we never read a half-written live global.
 static void applyServoHomeAngleLive() {
     dashboard.setHomeAngle(getStagedServoHomeAngle());
 }
 
-//* ************************************************************************
-//* ********************** POST /api/config CORE ***************************
-//* ************************************************************************
+// POST /api/config core
 bool applyConfigJson(const String& body, bool& outDeferred, String& outMsg) {
     outDeferred = false;
 
@@ -157,9 +143,9 @@ bool applyConfigJson(const String& body, bool& outDeferred, String& outMsg) {
 
     JsonObject obj = doc.as<JsonObject>();
 
-    //! ********************** PASS 1: VALIDATE ALL KEYS *******************
-    //! Validate everything BEFORE mutating anything so a bad key leaves
-    //! state untouched (contract: unknown/out-of-range => change nothing).
+    // Pass 1: validate all keys
+    // Validate everything BEFORE mutating anything so a bad key leaves
+    // state untouched (contract: unknown/out-of-range => change nothing).
     for (JsonPair kv : obj) {
         ConfigField* field = findField(kv.key().c_str());
         if (field == nullptr) {
@@ -177,12 +163,12 @@ bool applyConfigJson(const String& body, bool& outDeferred, String& outMsg) {
         }
     }
 
-    //! ********************** PASS 2: STAGE ACCEPTED VALUES ***************
-    //! Write accepted values into the in-RAM STAGING area only (the persist
-    //! struct + staged servo-home mirror). NO live runtime global is touched
-    //! here -- FEEDING_DURATION_MS et al. are read live mid-cycle, so a
-    //! mid-feed POST must not mutate them. Live globals change only in the
-    //! IDLE branch below (or on the next IDLE entry for the deferred path).
+    // Pass 2: stage accepted values
+    // Write accepted values into the in-RAM STAGING area only (the persist
+    // struct + staged servo-home mirror). NO live runtime global is touched
+    // here -- FEEDING_DURATION_MS et al. are read live mid-cycle, so a
+    // mid-feed POST must not mutate them. Live globals change only in the
+    // IDLE branch below (or on the next IDLE entry for the deferred path).
     bool touchedServoHome = false;
     for (JsonPair kv : obj) {
         ConfigField* field = findField(kv.key().c_str());
@@ -190,17 +176,17 @@ bool applyConfigJson(const String& body, bool& outDeferred, String& outMsg) {
         if (strcmp(field->key, "SERVO_HOME_ANGLE") == 0) touchedServoHome = true;
     }
 
-    //! ********************** ALWAYS PERSIST IMMEDIATELY *****************
-    //! Flush the staged struct (addr 4) and, if touched, the servo-home
-    //! mirror (addr 0). Both persist WITHOUT moving the servo or writing a
-    //! live global, so this is safe on the deferred path.
+    // Always persist immediately
+    // Flush the staged struct (addr 4) and, if touched, the servo-home
+    // mirror (addr 0). Both persist WITHOUT moving the servo or writing a
+    // live global, so this is safe on the deferred path.
     saveSettings();
     if (touchedServoHome) persistServoHomeAngle();
 
-    //! ********************** APPLY NOW OR DEFER **************************
+    // Apply now or defer
     if (isSafeToApplyConfig()) {
-        //! Truly-motionless IDLE: copy staged struct -> live globals now and
-        //! move the servo to the staged home angle.
+        // Truly-motionless IDLE: copy staged struct -> live globals now and
+        // move the servo to the staged home angle.
         applySettings();
         if (touchedServoHome) applyServoHomeAngleLive();
         outDeferred = false;
@@ -208,11 +194,11 @@ bool applyConfigJson(const String& body, bool& outDeferred, String& outMsg) {
         return true;
     }
 
-    //! Mid-cycle (HOMING / FEEDING / etc.): values are persisted + staged,
-    //! but do NOT touch ANY live runtime variable. The next IDLE entry copies
-    //! staged -> live and moves the servo via configDirty. Only flag the
-    //! servo-home apply if THIS POST actually staged SERVO_HOME_ANGLE, so a
-    //! non-servo deferred POST cannot revert a websocket-set home angle.
+    // Mid-cycle (HOMING / FEEDING / etc.): values are persisted + staged,
+    // but do NOT touch ANY live runtime variable. The next IDLE entry copies
+    // staged -> live and moves the servo via configDirty. Only flag the
+    // servo-home apply if THIS POST actually staged SERVO_HOME_ANGLE, so a
+    // non-servo deferred POST cannot revert a websocket-set home angle.
     if (touchedServoHome) g_servoHomeStaged = true;
     configDirty = true;
     outDeferred = true;
@@ -220,22 +206,20 @@ bool applyConfigJson(const String& body, bool& outDeferred, String& outMsg) {
     return true;
 }
 
-//* ************************************************************************
-//* ********************** DEFERRED APPLY (MAIN LOOP) **********************
-//* ************************************************************************
+// Deferred apply (main loop)
 void applyPendingConfigIfIdle() {
     if (!configDirty) return;
-    if (currentState != S_IDLE) return;
+    if (currentState != STATE_IDLE) return;
 
-    //! Copy the persisted/staged struct into the live globals. This is the
-    //! ONLY place the deferred non-servo values reach the live runtime.
+    // Copy the persisted/staged struct into the live globals. This is the
+    // ONLY place the deferred non-servo values reach the live runtime.
     applySettings();
 
-    //! Move the servo to the staged home angle / commit addr 0 ONLY if this
-    //! deferred batch actually staged SERVO_HOME_ANGLE. Otherwise we would
-    //! revert the servo to a stale staged angle and clobber a websocket-set
-    //! home angle (the websocket path updates the live angle + addr 0 but not
-    //! the staged mirror). Mirrors the apply-now touchedServoHome guard.
+    // Move the servo to the staged home angle / commit addr 0 ONLY if this
+    // deferred batch actually staged SERVO_HOME_ANGLE. Otherwise we would
+    // revert the servo to a stale staged angle and clobber a websocket-set
+    // home angle (the websocket path updates the live angle + addr 0 but not
+    // the staged mirror). Mirrors the apply-now touchedServoHome guard.
     if (g_servoHomeStaged) {
         applyServoHomeAngleLive();
         g_servoHomeStaged = false;
@@ -243,15 +227,13 @@ void applyPendingConfigIfIdle() {
     configDirty = false;
 }
 
-//* ************************************************************************
-//* ********************** ROUTE REGISTRATION ******************************
-//* ************************************************************************
+// Route registration
 static void addCors(AsyncWebServerResponse* response) {
     response->addHeader("Access-Control-Allow-Origin", "*");
 }
 
 void setupConfigApi(AsyncWebServer& server) {
-    //! ********************** GET /api/status ****************************
+    // GET /api/status
     server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) {
         AsyncWebServerResponse* response =
             request->beginResponse(200, "application/json", buildStatusJson());
@@ -259,7 +241,7 @@ void setupConfigApi(AsyncWebServer& server) {
         request->send(response);
     });
 
-    //! ********************** GET /api/config ****************************
+    // GET /api/config
     server.on("/api/config", HTTP_GET, [](AsyncWebServerRequest* request) {
         AsyncWebServerResponse* response =
             request->beginResponse(200, "application/json", buildConfigJson());
@@ -267,20 +249,20 @@ void setupConfigApi(AsyncWebServer& server) {
         request->send(response);
     });
 
-    //! ********************** POST /api/config ***************************
-    //! Raw onBody accumulator (the me-no-dev fork may not expose
-    //! AsyncCallbackJsonWebHandler). Accumulate chunks into a String keyed
-    //! by request, then on the final chunk validate/persist/apply.
-    //!
-    //! IMPORTANT (me-no-dev fork): onRequest ALWAYS runs after onBody. Do
-    //! NOT gate it on a _tempObject sentinel -- onBody nulls _tempObject on
-    //! the final chunk, so that would make every real POST fall through to a
-    //! bogus empty-body 400 that REPLACES the real response. Gate strictly on
-    //! request->contentLength() == 0: the genuine empty-body case.
+    // POST /api/config
+    // Raw onBody accumulator (the me-no-dev fork may not expose
+    // AsyncCallbackJsonWebHandler). Accumulate chunks into a String keyed
+    // by request, then on the final chunk validate/persist/apply.
+    //
+    // IMPORTANT (me-no-dev fork): onRequest ALWAYS runs after onBody. Do
+    // NOT gate it on a _tempObject sentinel -- onBody nulls _tempObject on
+    // the final chunk, so that would make every real POST fall through to a
+    // bogus empty-body 400 that REPLACES the real response. Gate strictly on
+    // request->contentLength() == 0: the genuine empty-body case.
     server.on(
         "/api/config", HTTP_POST,
-        //! onRequest: the body path (onBody) already sent the real response
-        //! when there was a body. Here we only handle the empty-body POST.
+        // onRequest: the body path (onBody) already sent the real response
+        // when there was a body. Here we only handle the empty-body POST.
         [](AsyncWebServerRequest* request) {
             if (request->contentLength() == 0) {
                 JsonDocument doc;
@@ -295,16 +277,16 @@ void setupConfigApi(AsyncWebServer& server) {
             }
         },
         nullptr,
-        //! onBody: accumulate the raw body across chunks.
+        // onBody: accumulate the raw body across chunks.
         [](AsyncWebServerRequest* request, uint8_t* data, size_t len,
            size_t index, size_t total) {
             if (index == 0) {
                 request->_tempObject = new String();
                 ((String*)request->_tempObject)->reserve(total);
-                //! Harden against a mid-body abort: the fork frees
-                //! _tempObject with C free() (skips ~String, leaking the char
-                //! buffer). Delete it properly on disconnect; we re-null
-                //! _tempObject below before this can double-fire on success.
+                // Harden against a mid-body abort: the fork frees
+                // _tempObject with C free() (skips ~String, leaking the char
+                // buffer). Delete it properly on disconnect; we re-null
+                // _tempObject below before this can double-fire on success.
                 request->onDisconnect([request]() {
                     if (request->_tempObject != nullptr) {
                         delete (String*)request->_tempObject;
@@ -315,7 +297,7 @@ void setupConfigApi(AsyncWebServer& server) {
             String* buf = (String*)request->_tempObject;
             for (size_t i = 0; i < len; ++i) buf->concat((char)data[i]);
 
-            //! Final chunk: process and respond.
+            // Final chunk: process and respond.
             if (index + len == total) {
                 bool deferred = false;
                 String msg;

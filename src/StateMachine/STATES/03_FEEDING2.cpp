@@ -1,18 +1,14 @@
 #include "StateMachine/STATES/03_FEEDING2.h"
-#include "StateMachine/StateMachine_Common.h"
+#include "StateMachine/StateMachine.h"
 #include "Config/Pins_Definitions.h"
 
 // FEEDING2 CONFIG
 const float FEEDING2_START_DELAY_MS = 1.0f;
 const float FEEDING2_DURATION_MS = 2300.0f;
 
-//* ************************************************************************
-//* ********************* SECOND FEEDING STATE HANDLER **********************
-//* ************************************************************************
+// Second feeding state handler
 void handleFeeding2State() {
-    //! ************************************************************************
-    //! STEP 1: START SECOND FEED
-    //! ************************************************************************
+    // Step 1: start second feed
     if (currentStep == 1.0f) {
         log_state_step("State: FEEDING2 - Step 1: Starting second feed.");
         // Retract cylinder to push wood (HIGH = retracted/active)
@@ -21,10 +17,8 @@ void handleFeeding2State() {
         stepStartTime = millis();
         currentStep = 2.0f;
     }
-    
-    //! ************************************************************************
-    //! STEP 2: WAIT FOR FEED TIME TO ELAPSE
-    //! ************************************************************************
+
+    // Step 2: wait for feed time to elapse
     else if (currentStep == 2.0f) {
         log_state_step("State: FEEDING2 - Step 2: Waiting for feed time to elapse.");
         if (millis() - stepStartTime >= FEEDING2_DURATION_MS) {
@@ -32,9 +26,8 @@ void handleFeeding2State() {
             Serial.println("                 - Machine cycle complete. Returning to IDLE state.");
             // Extend cylinder to safe position (LOW = extended/safe)
             digitalWrite(FEED_CYLINDER_PIN, LOW);
-            currentState = S_IDLE;  // Go back to IDLE state
+            currentState = STATE_IDLE;  // Go back to IDLE state
             currentStep = 1.0f;
         }
     }
 }
-
