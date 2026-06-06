@@ -36,6 +36,11 @@ extern float currentStep;
 //! ********************** ESP-NOW ******************************************
 extern volatile bool espNowStartReceived;
 
+//! ********************** RUNTIME-TUNABLE STATE CONFIG ********************
+extern float IDLE_HOME_OFFSET;       // 00_IDLE.cpp
+extern float ESPNOW_KICKOFF_OFFSET;  // 00_IDLE.cpp
+extern float FEEDING_DURATION_MS;    // 01_FEEDING.cpp
+
 //* ************************************************************************
 //* ********************** HELPER FUNCTIONS ********************************
 //* ************************************************************************

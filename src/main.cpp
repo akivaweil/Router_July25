@@ -23,6 +23,8 @@
 #include "ServoControl.h"
 #include "WebDashboard.h"
 #include "config/Pins_Definitions.h"
+#include "ConfigApi/MachineConfigApi.h"
+#include "ConfigApi/MachineSettings.h"
 
 //* ************************************************************************
 //* ********************** FORWARD DECLARATIONS ****************************
@@ -202,7 +204,20 @@ void setup() {
     //! INITIALIZE WEB DASHBOARD
     //! ************************************************************************
     dashboard.init(&SERVO_HOME_ANGLE, &flipServo);
+
+    //! ************************************************************************
+    //! LOAD PERSISTED MACHINE SETTINGS (3 new settings, EEPROM addr 4+)
+    //! EEPROM is already begun by dashboard.init(); SERVO_HOME_ANGLE (addr 0)
+    //! was loaded there. Seeds defaults on first boot.
+    //! ************************************************************************
+    loadSettings();
+
     dashboard.begin();
+
+    //! ************************************************************************
+    //! REGISTER SHARED CONFIG + STATUS API ON THE PORT-80 ASYNC SERVER
+    //! ************************************************************************
+    setupConfigApi(*dashboard.getServer());
 
     Serial.print("Dashboard: http://router.local or http://");
     Serial.println(WiFi.localIP());
@@ -239,6 +254,11 @@ void loop() {
     //! ************************************************************************
     if (currentState == S_IDLE) {
         handleOTA();
+
+        //! ********************************************************************
+        //! APPLY ANY CONFIG CHANGES DEFERRED MID-CYCLE (now back in IDLE)
+        //! ********************************************************************
+        applyPendingConfigIfIdle();
     }
 
     //! ************************************************************************

@@ -41,6 +41,11 @@ public:
     //! ********************** INITIALIZATION *******************************
     void init(float* homeAngle, void* servo);
     void begin();
+
+    //! ********************** SERVER ACCESS ********************************
+    //! Exposes the port-80 AsyncWebServer so the shared config API can
+    //! register /api/* routes on it after begin().
+    AsyncWebServer* getServer() { return server; }
     
     //! ********************** CONTROL METHODS ******************************
     void setHomeAngle(float angle);

@@ -3,8 +3,8 @@
 #include "Config/Pins_Definitions.h"
 
 // IDLE CONFIG
-const float IDLE_HOME_OFFSET = 5.0f;       // Idle rests this many degrees below dashboard home angle
-const float ESPNOW_KICKOFF_OFFSET = 15.0f; // Kickoff nudges servo this many degrees above dashboard home (idle + 20)
+float IDLE_HOME_OFFSET = 5.0f;       // Idle rests this many degrees below dashboard home angle (runtime-tunable via config API)
+float ESPNOW_KICKOFF_OFFSET = 15.0f; // Kickoff nudges servo this many degrees above dashboard home (runtime-tunable via config API)
 const unsigned long KICKOFF_PRE_DELAY_MS = 50;   // Wait this long after start signal before nudging servo up
 const unsigned long ESPNOW_KICKOFF_DELAY_MS = 300;
 
