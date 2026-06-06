@@ -2,9 +2,7 @@
 #include "StateMachine/StateMachine_Common.h"
 #include "Config/Pins_Definitions.h"
 
-//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ ⚔️ IDLE CONFIG                                                       ║
-//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+// IDLE CONFIG
 const float IDLE_HOME_OFFSET = 5.0f;       // Idle rests this many degrees below dashboard home angle
 const float ESPNOW_KICKOFF_OFFSET = 15.0f; // Kickoff nudges servo this many degrees above dashboard home (idle + 20)
 const unsigned long KICKOFF_PRE_DELAY_MS = 50;   // Wait this long after start signal before nudging servo up

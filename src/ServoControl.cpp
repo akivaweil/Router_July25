@@ -1,11 +1,9 @@
 #include "ServoControl.h"
 
-//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ ⚔️ SERVO CONFIG ║
-//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+// SERVO CONFIG
 // 5V 25kg digital servo. Empirically tuned with load — raise if cylinder
 // fires before servo lands; lower if it waits too long.
-const float SERVO_MS_PER_DEGREE = 4.0f;
+const float SERVO_MS_PER_DEGREE = 12.0f;
 const unsigned long SERVO_MIN_MOVE_MS = 50; // floor for tiny moves / jitter
 
 //* ************************************************************************

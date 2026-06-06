@@ -2,11 +2,9 @@
 #include "StateMachine/StateMachine_Common.h"
 #include "Config/Pins_Definitions.h"
 
-//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ ⚔️ FEEDING CONFIG ║
-//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+// FEEDING CONFIG
 const float FEEDING_START_DELAY_MS = 300.0f;
-const float FEEDING_DURATION_MS = 2500.0f;
+const float FEEDING_DURATION_MS = 2300.0f;
 const float FEEDING_SERVO_PREP_DELAY_MS = 1000.0f; // Time after retraction begins before servo prep move
 const float FEEDING_SERVO_PREP_ANGLE = 70.0f;      // Servo angle in prep for the flip to 0
 

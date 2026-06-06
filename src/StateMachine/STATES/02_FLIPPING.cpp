@@ -2,9 +2,7 @@
 #include "StateMachine/StateMachine_Common.h"
 #include "Config/Pins_Definitions.h"
 
-//╔═══╗ ════════════════════════════════════════════════════════════════ ╔═══╗
-//║ ⚔️ FLIPPING CONFIG ║
-//╚═══╝ ════════════════════════════════════════════════════════════════ ╚═══╝
+// FLIPPING CONFIG
 const float FLIP_ANGLE = 0.0f;
 const float SERVO_PRE_HOME_ANGLE = 130.0f; // Servo angle before returning to home
 const float CYLINDER_RETRACT_AFTER_PRE_HOME_DELAY_MS = 1000.0f; // Delay after servo BEGINS moving to 130 before cylinder retracts
