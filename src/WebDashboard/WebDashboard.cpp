@@ -24,8 +24,8 @@ void WebDashboard::init(float* homeAngle, void* servo) {
     loadHomeAngleFromEEPROM();
 
     // Create web server and websocket server
-    server = new AsyncWebServer(80);
-    webSocket = new WebSocketsServer(81);
+    server = new AsyncWebServer(HTTP_SERVER_PORT);
+    webSocket = new WebSocketsServer(WEBSOCKET_SERVER_PORT);
 
     // Setup websocket event handler
     webSocket->onEvent([this](uint8_t num, WStype_t type, uint8_t* payload, size_t length) {
@@ -69,7 +69,7 @@ void WebDashboard::handleWebSocketEvent(uint8_t num, WStype_t type, uint8_t* pay
                     float newAngle = angleStr.toFloat();
 
                     // Validate angle range (0-180 degrees)
-                    if (newAngle >= 0.0f && newAngle <= 180.0f) {
+                    if (newAngle >= SERVO_MIN_ANGLE && newAngle <= SERVO_MAX_ANGLE) {
                         setHomeAngle(newAngle);
                     }
                 }
@@ -101,7 +101,7 @@ void WebDashboard::loadHomeAngleFromEEPROM() {
         EEPROM.get(HOME_ANGLE_ADDR, savedAngle);
 
         // Validate loaded value (check for uninitialized EEPROM)
-        if (savedAngle >= 0.0f && savedAngle <= 180.0f) {
+        if (savedAngle >= SERVO_MIN_ANGLE && savedAngle <= SERVO_MAX_ANGLE) {
             *homeAnglePtr = savedAngle;
         }
     }
@@ -529,7 +529,7 @@ String WebDashboard::getDashboardHTML() {
 
 // Control methods
 void WebDashboard::setHomeAngle(float angle) {
-    if (homeAnglePtr != nullptr && angle >= 0.0f && angle <= 180.0f) {
+    if (homeAnglePtr != nullptr && angle >= SERVO_MIN_ANGLE && angle <= SERVO_MAX_ANGLE) {
         *homeAnglePtr = angle;
         saveHomeAngleToEEPROM();
 

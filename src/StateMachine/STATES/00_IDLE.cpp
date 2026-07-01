@@ -10,8 +10,6 @@ const unsigned long ESPNOW_KICKOFF_DELAY_MS = 300;
 
 // Idle state handler
 void handleIdleState() {
-    log_state_step("State: IDLE - Waiting for start signal...");
-
     // Ensure servo is in idle position (dashboard home - offset)
     static bool servoHomed = false;
     static bool preKickoffPending = false;
@@ -30,7 +28,6 @@ void handleIdleState() {
         manualStartDebouncer.rose();
         espNowStartReceived = false;
         if (millis() - preKickoffStartTime >= KICKOFF_PRE_DELAY_MS) {
-            Serial.println("Pre-kickoff delay elapsed. Nudging servo to kickoff position.");
             flipServo.write(SERVO_HOME_ANGLE + ESPNOW_KICKOFF_OFFSET);
             kickoffStartTime = millis();
             preKickoffPending = false;
@@ -46,7 +43,6 @@ void handleIdleState() {
         manualStartDebouncer.rose();
         espNowStartReceived = false;
         if (millis() - kickoffStartTime >= ESPNOW_KICKOFF_DELAY_MS) {
-            Serial.println("Kickoff complete. Transitioning to FEEDING state.");
             kickoffPending = false;
             currentState = STATE_FEEDING;
             stateStartTime = millis();
@@ -59,7 +55,6 @@ void handleIdleState() {
     // Any start signal -> pre-kickoff + kickoff + full cycle (edge-triggered for sensor/manual)
     if (espNowStartReceived || startSensorDebouncer.rose() || manualStartDebouncer.rose()) {
         espNowStartReceived = false;
-        Serial.println("Start signal received. Waiting pre-kickoff delay.");
         preKickoffStartTime = millis();
         preKickoffPending = true;
     }

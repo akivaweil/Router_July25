@@ -11,7 +11,6 @@ const float CYLINDER_RETRACT_AFTER_PRE_HOME_DELAY_MS = 1000.0f; // Delay after s
 void handleFlippingState() {
     // Step 1: move servo to flip position
     if (currentStep == 1.0f) {
-        log_state_step("State: FLIPPING - Step 1: Moving servo to flip position.");
         flipServo.write(FLIP_ANGLE);
         stepStartTime = millis();
         currentStep = 2.0f;
@@ -19,16 +18,13 @@ void handleFlippingState() {
 
     // Step 2: wait for servo to reach flip position
     else if (currentStep == 2.0f) {
-        log_state_step("State: FLIPPING - Step 2: Waiting for servo to reach flip position.");
         if (flipServo.hasReachedTarget()) {
-            Serial.println("                 - Servo has reached flip position. Sending servo back to pre-home.");
             currentStep = 3.0f;
         }
     }
 
     // Step 3: send servo back to pre-home (130 deg)
     else if (currentStep == 3.0f) {
-        log_state_step("State: FLIPPING - Step 3: Sending servo back to pre-home angle.");
         flipServo.write(SERVO_PRE_HOME_ANGLE);
         stepStartTime = millis();
         currentStep = 4.0f;
@@ -36,9 +32,7 @@ void handleFlippingState() {
 
     // Step 4: after delay, retract cylinder and transition to FEEDING2
     else if (currentStep == 4.0f) {
-        log_state_step("State: FLIPPING - Step 4: Waiting before retracting cylinder.");
         if (millis() - stepStartTime >= CYLINDER_RETRACT_AFTER_PRE_HOME_DELAY_MS) {
-            Serial.println("                 - Retracting cylinder and transitioning to FEEDING2 state.");
             // Retract cylinder to push wood (HIGH = retracted/active)
             digitalWrite(FEED_CYLINDER_PIN, HIGH);
             currentState = STATE_FEEDING2;

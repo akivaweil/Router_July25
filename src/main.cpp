@@ -12,6 +12,7 @@
 #include <esp_now.h>
 #include <esp_wifi.h>
 #include <WiFi.h>
+#include <esp_task_wdt.h>
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 
@@ -23,9 +24,13 @@
 #include "ConfigApi/MachineConfigApi.h"
 #include "ConfigApi/MachineSettings.h"
 
+// Task watchdog timeout (seconds): resets the chip if the loop task stalls longer
+// than this. The flip/feed states are non-blocking, so the loop feeds it each
+// iteration (and the OTA progress callback feeds it during an upload).
+static const uint32_t WATCHDOG_TIMEOUT_S = 15;
+
 // Forward declarations
 void handleStateMachine();
-void log_state_step(const char* message);
 void initEspNow();
 
 // State enumeration
@@ -52,8 +57,6 @@ WebDashboard dashboard;
 
 // State machine variables
 volatile SystemState currentState = STATE_IDLE;
-SystemState lastLoggedState = STATE_NONE;
-float lastLoggedStep = 0.0f;
 
 // Timing variables
 unsigned long stateStartTime = 0;
@@ -67,14 +70,18 @@ unsigned long lastEspNowSignalTime = 0;
 // Ignore repeated signal=1 messages within this window (Stage 2 sends 3x rapid-fire)
 static const unsigned long ESPNOW_DEDUP_MS = 200;
 
-// Helper functions
-void log_state_step(const char* message) {
-    if (currentState != lastLoggedState || currentStep != lastLoggedStep) {
-        Serial.println(message);
-        lastLoggedState = currentState;
-        lastLoggedStep = currentStep;
-    }
-}
+// ESP-NOW protocol: the start command value Stage 2 sends in RouterMessage.signal.
+static const uint8_t ESPNOW_CMD_START = 1;
+
+// Max TX power for esp_wifi_set_max_tx_power() (units: 0.25 dBm steps).
+static const int8_t ESPNOW_TX_POWER = 84;
+
+// Servo PWM: LEDC frequency / resolution for the flip servo.
+static const int SERVO_PWM_FREQ_HZ = 50;
+static const int SERVO_PWM_RESOLUTION_BITS = 14;
+
+// Input debounce interval (ms) for the start sensor / manual start switches.
+static const uint16_t START_DEBOUNCE_MS = 3;
 
 // ESP-NOW receiver
 typedef struct { uint8_t signal; } RouterMessage;
@@ -84,34 +91,26 @@ void onEspNowReceive(const uint8_t* mac, const uint8_t* data, int len) {
     RouterMessage msg;
     memcpy(&msg, data, sizeof(msg));
 
-    Serial.printf("[ESP-NOW] signal=%d  state=%d  timeSinceLast=%lums\n",
-                  msg.signal, (int)currentState, millis() - lastEspNowSignalTime);
-
     // Deduplicate: ignore signal=1 repeats within 200ms window.
     // Stage 2 sends each message 3x rapid-fire (5ms apart) for redundancy.
-    if (msg.signal == 1 && (millis() - lastEspNowSignalTime > ESPNOW_DEDUP_MS)) {
+    if (msg.signal == ESPNOW_CMD_START && (millis() - lastEspNowSignalTime > ESPNOW_DEDUP_MS)) {
         lastEspNowSignalTime = millis();
         // Only trigger if we're actually in IDLE — discard pulses mid-cycle
         if (currentState == STATE_IDLE) {
             espNowStartReceived = true;
-            Serial.println("[ESP-NOW] Trigger accepted");
-        } else {
-            Serial.println("[ESP-NOW] Trigger ignored (not in IDLE)");
         }
     }
 }
 
 void initEspNow() {
     // Set max TX power for reliable reception
-    esp_wifi_set_max_tx_power(84);
+    esp_wifi_set_max_tx_power(ESPNOW_TX_POWER);
 
     // Init ESP-NOW (WiFi must already be connected in STA mode)
     if (esp_now_init() != ESP_OK) {
-        Serial.println("ESP-NOW init failed");
         return;
     }
     esp_now_register_recv_cb(onEspNowReceive);
-    Serial.println("ESP-NOW receiver ready");
 }
 
 // State machine files
@@ -124,9 +123,11 @@ void initEspNow() {
 void setup() {
     // Initialize serial communication
     Serial.begin(115200);
+    Serial.println("[Router] booting");
 
-    // Disable brownout detector
-    WRITE_PERI_REG(RTC_CNTL_BROWN_OUT_REG, 0);
+    // Brownout detector left ENABLED (hardware default): on a voltage sag the
+    // chip resets cleanly instead of risking a corrupted EEPROM/NVS write or a
+    // half-driven motor/servo. (Previously this line disabled it.)
 
     // Configure input pins
     pinMode(START_SENSOR_PIN, INPUT_PULLDOWN);
@@ -135,15 +136,15 @@ void setup() {
 
     // Setup input debouncers
     startSensorDebouncer.attach(START_SENSOR_PIN);
-    startSensorDebouncer.interval(3); // 3ms debounce
+    startSensorDebouncer.interval(START_DEBOUNCE_MS); // 3ms debounce
     manualStartDebouncer.attach(MANUAL_START_PIN);
-    manualStartDebouncer.interval(3); // 3ms debounce
+    manualStartDebouncer.interval(START_DEBOUNCE_MS); // 3ms debounce
 
     // Initialize feed cylinder to safe position
     digitalWrite(FEED_CYLINDER_PIN, LOW); // LOW = extended = safe position
 
     // Configure servo motor
-    flipServo.init(FLIP_SERVO_PIN, 0, 50, 14); // pin, channel, frequency, resolution
+    flipServo.init(FLIP_SERVO_PIN, 0, SERVO_PWM_FREQ_HZ, SERVO_PWM_RESOLUTION_BITS); // pin, channel, frequency, resolution
     flipServo.write(SERVO_HOME_ANGLE);
 
     // Connect to WiFi
@@ -158,6 +159,14 @@ void setup() {
     while (WiFi.status() != WL_CONNECTED &&
            millis() - wifiConnectStart < WIFI_CONNECT_TIMEOUT_MS) {
         delay(WIFI_CONNECT_POLL_MS);
+    }
+
+    // Report network result on boot.
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("[Router] wifi ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("[Router] wifi unavailable - standalone");
     }
 
     // Initialize ESP-NOW receiver
@@ -180,16 +189,23 @@ void setup() {
     // Register shared config + status API on the port-80 async server
     setupConfigApi(*dashboard.getServer());
 
-    Serial.print("Dashboard: http://router.local or http://");
-    Serial.println(WiFi.localIP());
-    Serial.printf("WiFi channel: %d  (Stage 2 must match this)\n", WiFi.channel());
-
     // Initialize OTA functionality
     setupOTA();
+
+    // Subscribe the loop task to the task watchdog (last, so the boot-time WiFi
+    // connect isn't watched). esp_task_wdt_init() reconfigures the core's TWDT to
+    // our timeout; add(NULL) watches this (loop) task.
+    esp_task_wdt_init(WATCHDOG_TIMEOUT_S, true);
+    esp_task_wdt_add(NULL);
+
+    Serial.println("[Router] ready");
 }
 
 // Loop
 void loop() {
+    // Feed the task watchdog each iteration.
+    esp_task_wdt_reset();
+
     // Update input debouncers
     startSensorDebouncer.update();
     manualStartDebouncer.update();

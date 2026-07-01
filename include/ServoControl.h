@@ -37,8 +37,6 @@ public:
 
     // Servo control methods
     void write(float angle);                    // Set servo to specific angle
-    void writeMicroseconds(int microseconds);   // Set servo pulse width directly
-    void detach();                              // Detach servo from pin
 
     // Configuration methods
     void setPulseWidthRange(int minUs, int maxUs);  // Set pulse width range

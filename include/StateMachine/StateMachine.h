@@ -36,6 +36,3 @@ extern volatile bool espNowStartReceived;
 extern float IDLE_HOME_OFFSET;       // 00_IDLE.cpp
 extern float ESPNOW_KICKOFF_OFFSET;  // 00_IDLE.cpp
 extern float FEEDING_DURATION_MS;    // 01_FEEDING.cpp
-
-// Helper functions
-void log_state_step(const char* message);

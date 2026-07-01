@@ -12,6 +12,24 @@
 // staged here first and only copied into the live globals by
 // applySettings() (boot + next-IDLE deferred apply).
 
+// Validation bounds for the 3 persisted settings. These mirror the ranges the
+// config API exposes/enforces (MachineConfigApi.cpp FIELDS), so a corrupted or
+// stale-layout EEPROM image can never push an out-of-range value into a live
+// global on load. Same handling as the servo-home angle (validated by
+// WebDashboard on load).
+static const float IDLE_HOME_OFFSET_MIN      = 0.0f;
+static const float IDLE_HOME_OFFSET_MAX      = 30.0f;
+static const float ESPNOW_KICKOFF_OFFSET_MIN = 0.0f;
+static const float ESPNOW_KICKOFF_OFFSET_MAX = 50.0f;
+static const float FEEDING_DURATION_MS_MIN   = 1000.0f;
+static const float FEEDING_DURATION_MS_MAX   = 5000.0f;
+
+static float clampf(float v, float lo, float hi) {
+    if (v < lo) return lo;
+    if (v > hi) return hi;
+    return v;
+}
+
 // In-RAM staging snapshot
 static MachineSettings g_settings;
 static float g_stagedServoHomeAngle = 0.0f; // mirror of addr-0 SERVO_HOME_ANGLE
@@ -56,6 +74,16 @@ void loadSettings() {
         EEPROM.commit();
         return;
     }
+
+    // Valid magic: clamp the persisted values to their sane ranges before they
+    // reach the live globals. A corrupted/garbage field is pulled back to a safe
+    // bound; an in-range field is unchanged (behavior-identical).
+    g_settings.idleHomeOffset      = clampf(g_settings.idleHomeOffset,
+                                            IDLE_HOME_OFFSET_MIN, IDLE_HOME_OFFSET_MAX);
+    g_settings.espnowKickoffOffset = clampf(g_settings.espnowKickoffOffset,
+                                            ESPNOW_KICKOFF_OFFSET_MIN, ESPNOW_KICKOFF_OFFSET_MAX);
+    g_settings.feedingDurationMs   = clampf(g_settings.feedingDurationMs,
+                                            FEEDING_DURATION_MS_MIN, FEEDING_DURATION_MS_MAX);
 
     // Valid: push into live globals
     applySettings();

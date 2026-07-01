@@ -67,24 +67,6 @@ void ServoControl::write(float angle) {
     }
 }
 
-void ServoControl::writeMicroseconds(int microseconds) {
-    // Check if servo is initialized
-    if (channel >= 0) {
-        int maxDuty = (1 << resolution) - 1;
-        int duty = (microseconds / (1000000.0 / frequency)) * maxDuty;
-        ledcWrite(channel, duty);
-        lastUpdateTime = millis();   // Record the time of update
-    }
-}
-
-void ServoControl::detach() {
-    // Detach servo from pin and reset channel
-    if (channel >= 0) {
-        ledcDetachPin(pin);
-        channel = -1;
-    }
-}
-
 // Configuration methods
 void ServoControl::setPulseWidthRange(int minUs, int maxUs) {
     minPulseWidth = minUs;

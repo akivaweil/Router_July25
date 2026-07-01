@@ -20,6 +20,14 @@ private:
     float* homeAnglePtr;  // Pointer to the home angle variable
     void* servoPtr;       // Pointer to the servo object
 
+    // Network settings
+    static const uint16_t HTTP_SERVER_PORT = 80;
+    static const uint16_t WEBSOCKET_SERVER_PORT = 81;
+
+    // Servo angle bounds (degrees)
+    static constexpr float SERVO_MIN_ANGLE = 0.0f;
+    static constexpr float SERVO_MAX_ANGLE = 180.0f;
+
     // EEPROM settings
     static const int EEPROM_SIZE = 512;
     static const int HOME_ANGLE_ADDR = 0;
